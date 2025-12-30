@@ -1,4 +1,4 @@
-Options +FollowSymLinks +Indexes
+Options +FollowSymLinks
 DirectoryIndex index.php index.html
 
 <IfModule mod_rewrite.c>
@@ -7,9 +7,3 @@ DirectoryIndex index.php index.html
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [L]
 </IfModule>
-
-<Directory />
-    Options +Indexes +FollowSymLinks
-    AllowOverride All
-    Require all granted
-</Directory>
