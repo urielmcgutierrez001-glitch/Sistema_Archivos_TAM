@@ -57,16 +57,21 @@ MAPEO_COLUMNAS = {
     'NRO INGRESO': 'nro_comprobante',
     'NRO. INGRESO': 'nro_comprobante',
     'NRO. CEPS': 'nro_comprobante',
+    'NRO COMPROBANTE DE CONTABILIDAD EGRESO': 'nro_comprobante',
+    'NRO COMPROBANTE DE CONTABILIDAD INGRESO': 'nro_comprobante',
     'ABC/1,1:1,2:1,3…': 'codigo_abc',
     'NRO. LIBRO/AMARR': 'contenedor_numero',
     'NRO. LIBRO AMARR': 'contenedor_numero',
     'NRO. LIBRO\nAMARR': 'contenedor_numero',
     'NRO. LIBRO\nAMARRO': 'contenedor_numero',
+    'NRO. LIBRO/\nAMARRO/ TOMO': 'contenedor_numero',
     'BLOQUE/NIVEL': 'bloque_nivel',
     'BLOQUE / NIVEL': 'bloque_nivel',
     'BLOQUE\nNIVEL': 'bloque_nivel',
+    'BLOQUENIVEL': 'bloque_nivel',
     'LIBRO COLOR': 'libro_color',
     'LIBRO\nCOLOR': 'libro_color',
+    'LIBROCOLOR': 'libro_color',
     'Ubicación Unidad/Área': 'ubicacion',
     'OBSERVACIONES': 'observaciones',
     'OBS.': 'observaciones'
@@ -233,7 +238,9 @@ def importar_excel(tipo_documento, archivo_excel):
                         'NRO. COMPROBANTE DIARIO', 'NRO. DE COMPROBANTE DIARIO',
                         'NRO. PREVENTIVOS', 'PREVENTIVOS', 'ASIENTOS MANUALES',
                         'COMPROBANTE DE CONTABILIDAD TRASPASO',
-                        'NRO INGRESO', 'NRO. INGRESO', 'NRO. CEPS'
+                        'NRO INGRESO', 'NRO. INGRESO', 'NRO. CEPS',
+                        'NRO COMPROBANTE DE CONTABILIDAD EGRESO',
+                        'NRO COMPROBANTE DE CONTABILIDAD INGRESO'
                     ])
                     
                     if col_comprobante:
@@ -248,7 +255,8 @@ def importar_excel(tipo_documento, archivo_excel):
                     # Obtener contenedor
                     col_contenedor = obtener_columna_mapeada(df, [
                         'NRO. LIBRO/AMARR', 'NRO. LIBRO AMARR', 
-                        'NRO. LIBRO\nAMARR', 'NRO. LIBRO\nAMARRO'
+                        'NRO. LIBRO\nAMARR', 'NRO. LIBRO\nAMARRO',
+                        'NRO. LIBRO/\nAMARRO/ TOMO'
                     ])
                     numero_contenedor = limpiar_valor(fila[col_contenedor]) if col_contenedor else None
                     

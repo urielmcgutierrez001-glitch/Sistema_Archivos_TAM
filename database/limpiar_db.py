@@ -6,10 +6,10 @@ Ejecuta en Clever Cloud MySQL
 import pymysql
 
 DB_CONFIG = {
-    'host': 'bf7yz05jw1xmnb2vukrs-mysql.services.clever-cloud.com',
-    'user': 'uh5uxh0yxbs9cxva',
-    'password': 'HdTIK6C8X5M5qsQUTXoE',
-    'database': 'bf7yz05jw1xmnb2vukrs',
+    'host': 'localhost',
+    'user': 'root',
+    'password': '',
+    'database': 'tamep_archivos',
     'charset': 'utf8mb4',
     'cursorclass': pymysql.cursors.DictCursor
 }
