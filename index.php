@@ -1,7 +1,11 @@
 <?php
-// Redirigir todo a /public/index.php
-if (!file_exists('public/index.php')) {
-    die('Error: public/index.php not found');
-}
+/**
+ * Punto de entrada raíz
+ * Redirige a public/index.php con directorio correcto
+ */
 
-require 'public/index.php';
+// Cambiar al directorio public
+chdir(__DIR__ . '/public');
+
+// Incluir el index.php del public
+require __DIR__ . '/public/index.php';
