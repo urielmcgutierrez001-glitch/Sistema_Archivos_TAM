@@ -11,7 +11,7 @@ namespace TAMEP\Models;
 class Usuario extends BaseModel
 {
     protected $table = 'usuarios';
-    protected $fillable = ['username', 'password', 'nombre_completo', 'rol', 'activo'];
+    protected $fillable = ['username', 'password_hash', 'nombre_completo', 'rol', 'activo'];
     
     /**
      * Buscar usuario por username
@@ -29,7 +29,7 @@ class Usuario extends BaseModel
     {
         $user = $this->findByUsername($username);
         
-        if (!$user || !password_verify($password, $user['password'])) {
+        if (!$user || !password_verify($password, $user['password_hash'])) {
             return false;
         }
         

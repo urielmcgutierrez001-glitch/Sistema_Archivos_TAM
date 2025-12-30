@@ -85,7 +85,7 @@ class UsuariosController extends BaseController
         // Preparar datos
         $data = [
             'username' => $_POST['username'],
-            'password' => password_hash($_POST['password'], PASSWORD_DEFAULT),
+            'password_hash' => password_hash($_POST['password'], PASSWORD_DEFAULT),
             'nombre_completo' => $_POST['nombre_completo'],
             'rol' => $_POST['rol'],
             'activo' => isset($_POST['activo']) ? 1 : 0
@@ -156,7 +156,7 @@ class UsuariosController extends BaseController
         
         // Actualizar contraseña solo si se proporcionó una nueva
         if (!empty($_POST['password'])) {
-            $data['password'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
+            $data['password_hash'] = password_hash($_POST['password'], PASSWORD_DEFAULT);
         }
         
         // Actualizar
