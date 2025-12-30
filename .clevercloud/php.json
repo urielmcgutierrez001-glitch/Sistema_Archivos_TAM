@@ -1,6 +1,6 @@
 {
   "deploy": {
-    "webroot": "/public"
+    "webroot": "/"
   },
   "configuration": {
     "mbstring.func_overload": 0,
