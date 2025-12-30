@@ -1,0 +1,13 @@
+{
+    "name": "tamep/gestion-archivos",
+    "description": "Sistema de Gestión de Archivos TAMEP",
+    "type": "project",
+    "require": {
+        "php": ">=8.0"
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "@php -r \"echo 'Deployment completado en Clever Cloud';\""
+        ]
+    }
+}
