@@ -1,1 +1,1 @@
-﻿<?php\nhttp_response_code(200);\necho 'Clever Cloud deploy test: OK';\n
+﻿<?php\nhttp_response_code(200); echo 'Clever Cloud deploy test: OK';
