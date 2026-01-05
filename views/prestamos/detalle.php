@@ -6,49 +6,37 @@ $pageTitle = 'Detalle de Préstamo';
 <div class="card">
     <div class="card-header flex-between">
         <h2>📋 Detalle del Préstamo #<?= $prestamo['id'] ?></h2>
-        <div style="display: flex; gap: 10px;">
-            <?php if ($prestamo['estado'] === 'Prestado'): ?>
-                <button onclick="confirmarDevolucion(<?= $prestamo['id'] ?>)" class="btn btn-success">
-                    ✓ Registrar Devolución
-                </button>
-            <?php endif; ?>
-            <a href="/prestamos" class="btn btn-secondary">← Volver al Listado</a>
+        <div class="header-actions">
+            <!-- Export Buttons -->
+            <a href="/prestamos/exportar-pdf/<?= $prestamo['id'] ?>" target="_blank" class="btn btn-warning">
+                📄 PDF
+            </a>
+            <a href="/prestamos/exportar-excel/<?= $prestamo['id'] ?>" target="_blank" class="btn btn-success">
+                📊 Excel
+            </a>
+            <a href="/prestamos" class="btn btn-secondary">← Volver</a>
         </div>
     </div>
     
+    <!-- Group Information -->
     <div class="detail-grid">
-        <div class="detail-section">
-            <h3>Información del Documento</h3>
-            <dl class="detail-list">
-                <dt>Tipo de Documento:</dt>
-                <dd><strong><?= htmlspecialchars($prestamo['tipo_documento'] ?? 'N/A') ?></strong></dd>
-                
-                <dt>Gestión:</dt>
-                <dd><?= htmlspecialchars($prestamo['gestion'] ?? 'N/A') ?></dd>
-                
-                <dt>Nro de Comprobante:</dt>
-                <dd><?= htmlspecialchars($prestamo['nro_comprobante'] ?? 'N/A') ?></dd>
-                
-                <?php if ($prestamo['tipo_contenedor']): ?>
-                <dt>Contenedor:</dt>
-                <dd><?= htmlspecialchars($prestamo['tipo_contenedor']) ?> #<?= htmlspecialchars($prestamo['contenedor_numero'] ?? 'N/A') ?></dd>
-                <?php endif; ?>
-            </dl>
-        </div>
-        
         <div class="detail-section">
             <h3>Datos del Préstamo</h3>
             <dl class="detail-list">
-                <dt>Usuario Solicitante:</dt>
+                <dt>Unidad/Área Solicitante:</dt>
                 <dd>
-                    <strong><?= htmlspecialchars($prestamo['usuario_nombre'] ?? 'N/A') ?></strong><br>
-                    <small>(<?= htmlspecialchars($prestamo['username'] ?? 'N/A') ?>)</small>
+                    <strong><?= htmlspecialchars($prestamo['unidad_nombre'] ?? 'N/A') ?></strong>
+                </dd>
+
+                <dt>Prestatario:</dt>
+                <dd>
+                    <?= htmlspecialchars($prestamo['nombre_prestatario'] ?? 'No registrado') ?>
                 </dd>
                 
                 <dt>Fecha de Préstamo:</dt>
                 <dd><?= date('d/m/Y', strtotime($prestamo['fecha_prestamo'])) ?></dd>
                 
-                <dt>Fecha Devolución Estimada:</dt>
+                <dt>Fecha Devolución Est.:</dt>
                 <dd>
                     <?= date('d/m/Y', strtotime($prestamo['fecha_devolucion_esperada'])) ?>
                     <?php if ($prestamo['estado'] === 'Prestado' && strtotime($prestamo['fecha_devolucion_esperada']) < time()): ?>
@@ -56,12 +44,10 @@ $pageTitle = 'Detalle de Préstamo';
                     <?php endif; ?>
                 </dd>
                 
-                <?php if ($prestamo['fecha_devolucion_real']): ?>
-                <dt>Fecha Devolución Real:</dt>
-                <dd><?= date('d/m/Y', strtotime($prestamo['fecha_devolucion_real'])) ?></dd>
-                <?php endif; ?>
+                <dt>Total Documentos:</dt>
+                <dd class="text-large"><?= count($detalles) ?></dd>
                 
-                <dt>Estado:</dt>
+                <dt>Estado General:</dt>
                 <dd>
                     <?php if ($prestamo['estado'] === 'Prestado'): ?>
                         <span class="badge badge-prestado">📤 Prestado</span>
@@ -69,31 +55,90 @@ $pageTitle = 'Detalle de Préstamo';
                         <span class="badge badge-disponible">✅ Devuelto</span>
                     <?php endif; ?>
                 </dd>
-                
-                <dt>Registrado por:</dt>
-                <dd><?= htmlspecialchars($prestamo['creado_por_nombre'] ?? 'N/A') ?></dd>
             </dl>
         </div>
-    </div>
-    
-    <?php if (!empty($prestamo['observaciones'])): ?>
-    <div class="detail-section">
-        <h3>Observaciones</h3>
-        <p><?= nl2br(htmlspecialchars($prestamo['observaciones'])) ?></p>
-    </div>
-    <?php endif; ?>
-    
-    <div class="detail-actions">
-        <?php if ($prestamo['estado'] === 'Prestado'): ?>
-            <button class="btn btn-success" onclick="confirmarDevolucion(<?= $prestamo['id'] ?>)">
-                ✓ Registrar Devolución
-            </button>
+        
+        <?php if (!empty($prestamo['observaciones'])): ?>
+        <div class="detail-section">
+            <h3>Observaciones</h3>
+            <p><?= nl2br(htmlspecialchars($prestamo['observaciones'])) ?></p>
+        </div>
         <?php endif; ?>
-        <a href="/catalogacion/ver/<?= $prestamo['documento_id'] ?>" class="btn btn-primary">
-            📄 Ver Documento Completo
-        </a>
-        <button class="btn btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
-        <a href="/prestamos" class="btn btn-secondary">← Volver</a>
+    </div>
+
+    <!-- Documents List -->
+    <div class="documents-section" style="margin-top: 20px; padding: 20px;">
+        <h3>📚 Documentos Prestados</h3>
+        
+        <form action="/prestamos/actualizarEstados" method="POST" id="form-devoluciones">
+            <input type="hidden" name="encabezado_id" value="<?= $prestamo['id'] ?>">
+            
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th width="50">
+                                <input type="checkbox" id="check-all" onclick="toggleAll(this)">
+                            </th>
+                            <th>Documento</th>
+                            <th>Contenedor</th>
+                            <th>Estado Actual</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($detalles as $doc): ?>
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="devueltos[]" value="<?= $doc['id'] ?>" class="check-item"
+                                    <?= $doc['estado'] === 'Devuelto' ? 'checked' : '' ?>>
+                            </td>
+                            <td>
+                                <strong><?= htmlspecialchars($doc['tipo_documento'] ?? 'N/A') ?></strong><br>
+                                <small>
+                                    Gestión: <?= htmlspecialchars($doc['gestion'] ?? 'N/A') ?> 
+                                    | Nro: <?= htmlspecialchars($doc['nro_comprobante'] ?? 'N/A') ?>
+                                </small>
+                            </td>
+                            <td>
+                                <?php if ($doc['tipo_contenedor']): ?>
+                                    <?= htmlspecialchars($doc['tipo_contenedor']) ?> #<?= htmlspecialchars($doc['contenedor_numero']) ?>
+                                <?php else: ?>
+                                    <span class="text-muted">N/A</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($doc['estado'] === 'Prestado'): ?>
+                                    <span class="badge badge-prestado">📤 Prestado</span>
+                                <?php else: ?>
+                                    <span class="badge badge-disponible">✅ Devuelto</span>
+                                    <small class="d-block text-muted">
+                                        <?= date('d/m/Y', strtotime($doc['fecha_devolucion_real'])) ?>
+                                    </small>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($doc['estado'] === 'Devuelto'): ?>
+                                    <span class="text-success">✓</span>
+                                <?php else: ?>
+                                    -
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="detail-actions">
+                <button type="submit" name="action" value="devolver" class="btn btn-success">
+                    ✓ Registrar Devolución
+                </button>
+                <button type="submit" name="action" value="revertir" class="btn btn-warning" onclick="return confirm('¿Está seguro de revertir la devolución de los documentos NO seleccionados? Volverán a estado PRESTADO.');">
+                    ↩ Revertir Devolución (No marcados)
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -111,7 +156,7 @@ $pageTitle = 'Detalle de Préstamo';
     border-radius: 8px;
 }
 
-.detail-section h3 {
+.detail-section h3, .documents-section h3 {
     color: #1B3C84;
     margin-bottom: 15px;
     font-size: 18px;
@@ -136,27 +181,23 @@ $pageTitle = 'Detalle de Préstamo';
     color: #666;
 }
 
-.detail-actions {
+.header-actions {
     display: flex;
     gap: 10px;
-    justify-content: center;
-    padding: 20px;
-    border-top: 1px solid #ddd;
-    margin-top: 20px;
-    flex-wrap: wrap;
 }
 
-@media print {
-    .btn, .detail-actions {
-        display: none !important;
-    }
+.text-large {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #3182ce;
 }
 </style>
 
 <script>
-function confirmarDevolucion(id) {
-    if (confirm('¿Confirmar la devolución de este documento?\n\nSe actualizará el estado del documento a DISPONIBLE.')) {
-        window.location.href = '/prestamos/devolver/' + id;
+function toggleAll(source) {
+    const checkboxes = document.querySelectorAll('.check-item');
+    for(let i=0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = source.checked;
     }
 }
 </script>

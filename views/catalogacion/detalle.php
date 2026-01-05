@@ -77,13 +77,18 @@ $tipoDocumentoTexto = $tiposDocumento[$documento['tipo_documento'] ?? 'REGISTRO_
                 <dd>ID: <?= htmlspecialchars($documento['contenedor_fisico_id']) ?></dd>
                 <?php endif; ?>
                 
-                <?php if (isset($documento['ubicacion'])): ?>
+                <?php if (isset($documento['ubicacion_nombre'])): ?>
                 <dt>Ubicación:</dt>
-                <dd><?= htmlspecialchars($documento['ubicacion']['nombre']) ?></dd>
+                <dd><?= htmlspecialchars($documento['ubicacion_nombre']) ?></dd>
+
+                <?php if (!empty($documento['bloque_nivel'])): ?>
+                <dt>Bloque/Nivel:</dt>
+                <dd><?= htmlspecialchars($documento['bloque_nivel']) ?></dd>
+                <?php endif; ?>
                 
-                <?php if (!empty($documento['ubicacion']['descripcion'])): ?>
+                <?php if (!empty($documento['ubicacion_descripcion'])): ?>
                 <dt>Descripción Ubicación:</dt>
-                <dd><?= htmlspecialchars($documento['ubicacion']['descripcion']) ?></dd>
+                <dd><?= htmlspecialchars($documento['ubicacion_descripcion']) ?></dd>
                 <?php endif; ?>
                 <?php else: ?>
                 <dt>Ubicación:</dt>

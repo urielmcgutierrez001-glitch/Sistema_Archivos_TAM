@@ -45,11 +45,10 @@ $pageTitle = 'Gestión de Préstamos';
         <table class="table">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Documento</th>
-                    <th>Usuario</th>
+                    <th>Unidad/Área</th>
                     <th>Fecha Préstamo</th>
-                    <th>Fecha Devolución Est.</th>
+                    <th>Fecha Devolución</th>
+                    <th>Docs</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -57,7 +56,7 @@ $pageTitle = 'Gestión de Préstamos';
             <tbody>
                 <?php if (empty($prestamos)): ?>
                     <tr>
-                        <td colspan="7" class="text-center">No hay préstamos registrados</td>
+                        <td colspan="6" class="text-center">No hay préstamos registrados</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($prestamos as $pres): 
@@ -66,21 +65,21 @@ $pageTitle = 'Gestión de Préstamos';
                         $rowClass = $vencido ? 'row-vencido' : '';
                     ?>
                         <tr class="<?= $rowClass ?>">
-                            <td><?= $pres['id'] ?></td>
                             <td>
-                                <strong><?= htmlspecialchars($pres['tipo_documento'] ?? 'N/A') ?></strong><br>
-                                <small>
-                                    Gestión: <?= htmlspecialchars($pres['gestion'] ?? 'N/A') ?> 
-                                    | Nro: <?= htmlspecialchars($pres['nro_comprobante'] ?? 'N/A') ?>
-                                </small>
+                                <strong><?= htmlspecialchars($pres['unidad_nombre'] ?? 'N/A') ?></strong><br>
+                                <small class="text-muted">Prestatario: <?= htmlspecialchars($pres['nombre_prestatario'] ?? 'N/A') ?></small>
                             </td>
-                            <td><?= htmlspecialchars($pres['usuario_nombre'] ?? 'N/A') ?></td>
                             <td><?= date('d/m/Y', strtotime($pres['fecha_prestamo'])) ?></td>
                             <td>
                                 <?= date('d/m/Y', strtotime($pres['fecha_devolucion_esperada'])) ?>
                                 <?php if ($vencido): ?>
                                     <br><span class="badge badge-falta">⚠️ Vencido</span>
                                 <?php endif; ?>
+                            </td>
+                            <td>
+                                <span class="badge badge-info" style="background:#3182ce; color:white;">
+                                    <?= $pres['total_documentos'] ?> docs
+                                </span>
                             </td>
                             <td>
                                 <?php if ($pres['estado'] === 'Prestado'): ?>
@@ -90,12 +89,17 @@ $pageTitle = 'Gestión de Préstamos';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <a href="/prestamos/ver/<?= $pres['id'] ?>" class="btn btn-sm btn-primary">Ver</a>
-                                <?php if ($pres['estado'] === 'Prestado'): ?>
-                                    <button onclick="confirmarDevolucion(<?= $pres['id'] ?>)" class="btn btn-sm btn-success">
-                                        ✓ Devolver
-                                    </button>
-                                <?php endif; ?>
+                                <div class="btn-group" role="group">
+                                    <a href="/prestamos/ver/<?= $pres['id'] ?>" class="btn btn-sm btn-primary" title="Ver Detalle">
+                                        👁️ Ver
+                                    </a>
+                                    <a href="/prestamos/exportar-pdf/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-warning" title="PDF">
+                                        📄 PDF
+                                    </a>
+                                    <a href="/prestamos/exportar-excel/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-success" title="Excel">
+                                        📊 Excel
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

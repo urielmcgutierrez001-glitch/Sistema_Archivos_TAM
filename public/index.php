@@ -53,7 +53,10 @@ $router->post('/prestamos/guardar-multiple', 'PrestamosController@guardarMultipl
 $router->get('/prestamos/crear', 'PrestamosController@crear', ['AuthMiddleware']);
 $router->post('/prestamos/guardar', 'PrestamosController@guardar', ['AuthMiddleware']);
 $router->get('/prestamos/ver/{id}', 'PrestamosController@ver', ['AuthMiddleware']);
+$router->post('/prestamos/actualizarEstados', 'PrestamosController@actualizarEstados', ['AuthMiddleware']); // New Route
 $router->get('/prestamos/devolver/{id}', 'PrestamosController@devolver', ['AuthMiddleware']);
+$router->get('/prestamos/exportar-pdf/{id}', 'PrestamosController@exportarPdf', ['AuthMiddleware']);
+$router->get('/prestamos/exportar-excel/{id}', 'PrestamosController@exportarExcel', ['AuthMiddleware']);
 
 // Reportes
 $router->get('/reportes', 'ReportesController@index', ['AuthMiddleware']);

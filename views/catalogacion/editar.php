@@ -67,6 +67,7 @@ $pageTitle = 'Editar Documento';
                     <option value="DISPONIBLE" <?= ($documento['estado_documento'] ?? '') === 'DISPONIBLE' ? 'selected' : '' ?>>🟢 Disponible</option>
                     <option value="FALTA" <?= ($documento['estado_documento'] ?? '') === 'FALTA' ? 'selected' : '' ?>>🔴 Falta</option>
                     <option value="PRESTADO" <?= ($documento['estado_documento'] ?? '') === 'PRESTADO' ? 'selected' : '' ?>>🔵 Prestado</option>
+                    <option value="NO UTILIZADO" <?= ($documento['estado_documento'] ?? '') === 'NO UTILIZADO' ? 'selected' : '' ?>>🟡 No Utilizado</option>
                     <option value="ANULADO" <?= ($documento['estado_documento'] ?? '') === 'ANULADO' ? 'selected' : '' ?>>🟣 Anulado</option>
                 </select>
             </div>

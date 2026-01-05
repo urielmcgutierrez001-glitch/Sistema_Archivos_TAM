@@ -67,9 +67,8 @@ $pageTitle = 'Crear Nuevo Documento';
                     <option value="DISPONIBLE" selected>🟢 Disponible</option>
                     <option value="FALTA">🔴 Falta</option>
                     <option value="PRESTADO">🔵 Prestado</option>
-                    <option value="AN
-
-ULADO">🟣 Anulado</option>
+                    <option value="NO UTILIZADO">🟡 No Utilizado</option>
+                    <option value="ANULADO">🟣 Anulado</option>
                 </select>
             </div>
         </div>

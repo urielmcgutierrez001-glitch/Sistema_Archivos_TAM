@@ -124,16 +124,11 @@ class CatalogacionController extends BaseController
     {
         $this->requireAuth();
         
-        $documento = $this->registroDiario->find($id);
+        $documento = $this->registroDiario->findWithContenedor($id);
         
         if (!$documento) {
             \TAMEP\Core\Session::flash('error', 'Documento no encontrado');
             $this->redirect('/catalogacion');
-        }
-        
-        // Obtener información relacionada
-        if (isset($documento['ubicacion_id']) && $documento['ubicacion_id']) {
-            $documento['ubicacion'] = $this->ubicacion->find($documento['ubicacion_id']);
         }
         
         if (isset($documento['unidad_id']) && $documento['unidad_id']) {

@@ -67,6 +67,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
                     <option value="DISPONIBLE" <?= isset($_GET['estado_documento']) && $_GET['estado_documento'] === 'DISPONIBLE' ? 'selected' : '' ?>>🟢 Disponible</option>
                     <option value="FALTA" <?= isset($_GET['estado_documento']) && $_GET['estado_documento'] === 'FALTA' ? 'selected' : '' ?>>🔴 Falta</option>
                     <option value="PRESTADO" <?= isset($_GET['estado_documento']) && $_GET['estado_documento'] === 'PRESTADO' ? 'selected' : '' ?>>🔵 Prestado</option>
+                    <option value="NO UTILIZADO" <?= isset($_GET['estado_documento']) && $_GET['estado_documento'] === 'NO UTILIZADO' ? 'selected' : '' ?>>🟡 No Utilizado</option>
                     <option value="ANULADO" <?= isset($_GET['estado_documento']) && $_GET['estado_documento'] === 'ANULADO' ? 'selected' : '' ?>>🟣 Anulado</option>
                 </select>
             </div>
@@ -143,6 +144,9 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
                             case 'ANULADO':
                                 $rowClass = 'row-anulado';
                                 break;
+                            case 'NO UTILIZADO':
+                                $rowClass = 'row-no-utilizado';
+                                break;
                             case 'DISPONIBLE':
                                 $rowClass = 'row-disponible';
                                 break;
@@ -191,6 +195,10 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
                                         $badgeClass = 'badge-anulado';
                                         $icon = '🟣';
                                         break;
+                                    case 'NO UTILIZADO':
+                                        $badgeClass = 'badge-no-utilizado';
+                                        $icon = '🟡';
+                                        break;
                                 }
                                 ?>
                                 <span class="badge <?= $badgeClass ?>"><?= $icon ?> <?= htmlspecialchars($estado) ?></span>
@@ -237,6 +245,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
 .badge-disponible { background: #28a745; } /* Verde */
 .badge-falta { background: #dc3545; } /* Rojo */
 .badge-prestado { background: #17a2b8; } /* Celeste */
+.badge-no-utilizado { background: #ffc107; color: #333; } /* Amarillo */
 .badge-anulado { background: #6f42c1; } /* Morado */
 .btn-sm { padding: 4px 12px; font-size: 13px; }
 .mt-20 { margin-top: 20px; }
@@ -246,6 +255,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
 .row-disponible { background-color: #f0fff0; } /* Verde muy claro */
 .row-falta { background-color: #ffe6e6; font-weight: 500; } /* Rojo claro */
 .row-prestado { background-color: #e6f7ff; } /* Celeste claro */
+.row-no-utilizado { background-color: #fff9e6; } /* Amarillo claro */
 .row-anulado { background-color: #f3e6ff; } /* Morado claro */
 
 .row-falta td { color: #721c24; }
@@ -306,6 +316,7 @@ function procesarLote() {
                 .disponible { background: #d4edda; }
                 .falta { background: #f8d7da; color: #721c24; font-weight: bold; }
                 .prestado { background: #d1ecf1; }
+                .no-utilizado { background: #fff3cd; }
                 .anulado { background: #e2d9f3; }
                 .header { display: flex; justify-content: space-between; align-items: center; }
                 @media print {

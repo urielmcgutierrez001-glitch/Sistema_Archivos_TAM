@@ -101,5 +101,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Guardar estado
         localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
     });
+
+    // --- Persistir Scroll del Sidebar ---
+    const sidebarScrollKey = 'sidebarScrollPos';
+    
+    // Restaurar scroll
+    const savedScroll = localStorage.getItem(sidebarScrollKey);
+    if (savedScroll) {
+        sidebar.scrollTop = savedScroll;
+    }
+
+    // Guardar scroll antes de salir
+    window.addEventListener('beforeunload', function() {
+        localStorage.setItem(sidebarScrollKey, sidebar.scrollTop);
+    });
 });
 </script>

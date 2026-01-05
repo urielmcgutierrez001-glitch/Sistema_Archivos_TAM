@@ -111,13 +111,18 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
         
         <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #cbd5e0;">
             <div class="form-group">
-                <label for="usuario_solicitante">Usuario Solicitante <span class="required">*</span></label>
-                <select id="usuario_solicitante" class="form-control">
+                <label for="unidad_area_solicitante">Unidad/Área Solicitante <span class="required">*</span></label>
+                <select id="unidad_area_solicitante" class="form-control">
                     <option value="">Seleccione...</option>
-                    <?php foreach ($usuarios as $usr): ?>
-                        <option value="<?= $usr['id'] ?>"><?= htmlspecialchars($usr['nombre_completo']) ?></option>
+                    <?php foreach ($ubicaciones as $ubi): ?>
+                        <option value="<?= $ubi['id'] ?>"><?= htmlspecialchars($ubi['nombre']) ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label for="nombre_prestatario">Nombre Prestatario</label>
+                <input type="text" id="nombre_prestatario" class="form-control" placeholder="Opcional...">
             </div>
             
             <div class="form-group">
@@ -296,11 +301,12 @@ function procesarPrestamo() {
         return;
     }
     
-    const usuario = document.getElementById('usuario_solicitante').value;
+    const unidad = document.getElementById('unidad_area_solicitante').value;
+    const prestatario = document.getElementById('nombre_prestatario').value;
     const fecha = document.getElementById('fecha_devolucion').value;
     
-    if (!usuario || !fecha) {
-        alert('⚠️ Debes completar Usuario y Fecha de Devolución');
+    if (!unidad || !fecha) {
+        alert('⚠️ Debes completar Unidad/Área indicando el solicitante y la Fecha de Devolución');
         return;
     }
     
@@ -316,7 +322,8 @@ function procesarPrestamo() {
     
     // Agregar datos
     form.innerHTML = `
-        <input type="hidden" name="usuario_id" value="${usuario}">
+        <input type="hidden" name="unidad_area_id" value="${unidad}">
+        <input type="hidden" name="nombre_prestatario" value="${prestatario}">
         <input type="hidden" name="fecha_devolucion" value="${fecha}">
         <input type="hidden" name="observaciones" value="${document.getElementById('observaciones_prestamo').value}">
         <input type="hidden" name="documentos" value='${JSON.stringify(documentosSeleccionados.map(d => d.id))}'>

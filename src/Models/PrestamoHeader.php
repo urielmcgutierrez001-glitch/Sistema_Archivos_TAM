@@ -1,0 +1,51 @@
+<?php
+/**
+ * Modelo PrestamoHeader
+ * Gestiona la cabecera de grupos de préstamos
+ * 
+ * @package TAMEP\Models
+ */
+
+namespace TAMEP\Models;
+
+class PrestamoHeader extends BaseModel
+{
+    protected $table = 'prestamos_encabezados';
+    protected $fillable = [
+        'usuario_id', 
+        'unidad_area_id',
+        'nombre_prestatario',
+        'fecha_prestamo', 
+        'fecha_devolucion_esperada',
+        'observaciones',
+        'estado'
+    ];
+    
+    /**
+     * Obtener los detalles (documentos) de este préstamo
+     */
+    public function getDetalles($id)
+    {
+        $sql = "SELECT p.*, 
+                       rd.nro_comprobante, rd.gestion, rd.tipo_documento, rd.codigo_abc,
+                       cf.tipo_contenedor, cf.numero as contenedor_numero,
+                       ub.nombre as ubicacion_fisica
+                FROM prestamos p
+                LEFT JOIN registro_diario rd ON p.documento_id = rd.id
+                LEFT JOIN contenedores_fisicos cf ON p.contenedor_fisico_id = cf.id
+                LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
+                WHERE p.encabezado_id = ?";
+                
+        return $this->db->fetchAll($sql, [$id]);
+    }
+
+    /**
+     * Contar documentos en este préstamo
+     */
+    public function countDetalles($id)
+    {
+        $sql = "SELECT COUNT(*) as total FROM prestamos WHERE encabezado_id = ?";
+        $result = $this->db->fetchOne($sql, [$id]);
+        return $result['total'] ?? 0;
+    }
+}

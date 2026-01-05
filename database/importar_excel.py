@@ -16,10 +16,10 @@ from datetime import datetime
 # CONFIGURACIÓN DE BASE DE DATOS
 # =====================================================
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '',
-    'database': 'tamep_archivos',
+    'host': 'bf7yz05jw1xmnb2vukrs-mysql.services.clever-cloud.com',
+    'user': 'uh5uxh0yxbs9cxva',
+    'password': 'HdTIK6C8X5M5qsQUTXoE',
+    'database': 'bf7yz05jw1xmnb2vukrs',
     'charset': 'utf8mb4',
     'cursorclass': pymysql.cursors.DictCursor
 }
@@ -82,14 +82,24 @@ MAPEO_COLUMNAS = {
 # =====================================================
 
 def normalizar_columna(nombre_col):
-    """Normaliza nombre de columna para búsqueda"""
-    return nombre_col.strip().replace('\n', ' ')
+    """Normaliza nombre de columna para búsqueda - elimina saltos de línea y espacios extra"""
+    return nombre_col.strip().replace('\n', ' ').replace('  ', ' ').upper()
 
 def obtener_columna_mapeada(df, posibles_nombres):
-    """Busca una columna por varios nombres posibles"""
+    """Busca una columna por varios nombres posibles (búsqueda exacta)"""
     for col in df.columns:
         col_norm = normalizar_columna(col)
-        if col_norm in posibles_nombres or col in posibles_nombres:
+        for nombre in posibles_nombres:
+            nombre_norm = normalizar_columna(nombre)
+            if col_norm == nombre_norm or col == nombre:
+                return col
+    return None
+
+def buscar_columna_por_patron(df, palabras_clave):
+    """Busca una columna que contenga TODAS las palabras clave (más flexible)"""
+    for col in df.columns:
+        col_norm = normalizar_columna(col)
+        if all(palabra.upper() in col_norm for palabra in palabras_clave):
             return col
     return None
 
@@ -122,19 +132,53 @@ def limpiar_valor(valor):
         return None
     return valor
 
+# Estados posibles de documentos
+ESTADOS_DOCUMENTO = ['ANULADO', 'INUTILIZADO', 'FALTA', 'PRESTADO']
+
+def detectar_estado_documento(fila, df):
+    """
+    Detecta el estado del documento buscando en varios campos:
+    - Estado (Perdido)
+    - Observaciones
+    - Estado (Prestado/Devuelto)
+    Estados posibles: ANULADO, INUTILIZADO, FALTA, PRESTADO
+    Si no encuentra ninguno, retorna 'DISPONIBLE'
+    """
+    # Campos donde buscar el estado
+    campos_estado = ['Estado (Perdido)', 'OBSERVACIONES', 'OBS.', 'Estado (Prestado/Devuelto)']
+    
+    for campo in campos_estado:
+        # Buscar columna que contenga ese nombre
+        for col in df.columns:
+            col_norm = col.strip().replace('\n', ' ').upper()
+            if campo.upper() in col_norm:
+                valor = fila[col]
+                if pd.isna(valor):
+                    continue
+                valor_str = str(valor).upper().strip()
+                # Buscar estado en el valor
+                for estado in ESTADOS_DOCUMENTO:
+                    if estado in valor_str:
+                        return estado
+    
+    return 'DISPONIBLE'
+
 def obtener_o_crear_contenedor(cursor, tipo_contenedor, numero, bloque_nivel=None, color=None, ubicacion_nombre=None):
     """Obtiene un contenedor existente o lo crea"""
     if not numero or pd.isna(numero):
         return None
     
-    numero = str(int(float(numero))) if isinstance(numero, (int, float)) else str(numero)
+    # Mantener el valor tal cual como string (puede ser "1", "A-TOMO 9", etc.)
+    numero_str = str(numero).strip()
+    if not numero_str:
+        return None
     
     # Buscar contenedor existente
     sql_buscar = """
         SELECT id FROM contenedores_fisicos 
         WHERE tipo_contenedor = %s AND numero = %s
     """
-    cursor.execute(sql_buscar, (tipo_contenedor, numero))
+    cursor.execute(sql_buscar, (tipo_contenedor, numero_str))
     resultado = cursor.fetchone()
     
     if resultado:
@@ -154,7 +198,7 @@ def obtener_o_crear_contenedor(cursor, tipo_contenedor, numero, bloque_nivel=Non
         (tipo_contenedor, numero, bloque_nivel, color, ubicacion_id, activo)
         VALUES (%s, %s, %s, %s, %s, 1)
     """
-    cursor.execute(sql_crear, (tipo_contenedor, numero, bloque_nivel, color, ubicacion_id))
+    cursor.execute(sql_crear, (tipo_contenedor, numero_str, bloque_nivel, color, ubicacion_id))
     contenedor_id = cursor.lastrowid
     
     return contenedor_id
@@ -252,20 +296,20 @@ def importar_excel(tipo_documento, archivo_excel):
                     col_abc = obtener_columna_mapeada(df, ['ABC/1,1:1,2:1,3…'])
                     codigo_abc = limpiar_valor(fila[col_abc]) if col_abc else None
                     
-                    # Obtener contenedor
-                    col_contenedor = obtener_columna_mapeada(df, [
-                        'NRO. LIBRO/AMARR', 'NRO. LIBRO AMARR', 
-                        'NRO. LIBRO\nAMARR', 'NRO. LIBRO\nAMARRO',
-                        'NRO. LIBRO/\nAMARRO/ TOMO'
-                    ])
+                    # Obtener contenedor - búsqueda flexible por palabras clave
+                    col_contenedor = buscar_columna_por_patron(df, ['LIBRO', 'AMARR'])
+                    if not col_contenedor:
+                        col_contenedor = buscar_columna_por_patron(df, ['NRO', 'LIBRO'])
                     numero_contenedor = limpiar_valor(fila[col_contenedor]) if col_contenedor else None
                     
-                    # Obtener bloque/nivel
-                    col_bloque = obtener_columna_mapeada(df, ['BLOQUE/NIVEL', 'BLOQUE / NIVEL', 'BLOQUE\nNIVEL'])
+                    # Obtener bloque/nivel - búsqueda flexible
+                    col_bloque = buscar_columna_por_patron(df, ['BLOQUE'])
+                    if not col_bloque:
+                        col_bloque = buscar_columna_por_patron(df, ['NIVEL'])
                     bloque_nivel = limpiar_valor(fila[col_bloque]) if col_bloque else None
                     
-                    # Obtener color
-                    col_color = obtener_columna_mapeada(df, ['LIBRO COLOR', 'LIBRO\nCOLOR'])
+                    # Obtener color - búsqueda flexible
+                    col_color = buscar_columna_por_patron(df, ['LIBRO', 'COLOR'])
                     color = limpiar_valor(fila[col_color]) if col_color else None
                     
                     # Obtener ubicación
@@ -313,13 +357,16 @@ def importar_excel(tipo_documento, archivo_excel):
                             cursor.execute(sql, (gestion, nro_comprobante, nro_hr, conam, rubro, interesado, contenedor_id))
                         else:
                             # Resto de documentos van a registro_diario
+                            # Detectar estado del documento
+                            estado_doc = detectar_estado_documento(fila, df)
+                            
                             sql = """
                                 INSERT IGNORE INTO registro_diario 
                                 (gestion, nro_comprobante, codigo_abc, tipo_documento, 
                                 contenedor_fisico_id, estado_documento)
-                                VALUES (%s, %s, %s, %s, %s, 'DISPONIBLE')
+                                VALUES (%s, %s, %s, %s, %s, %s)
                             """
-                            cursor.execute(sql, (gestion, nro_comprobante, codigo_abc, tipo_documento, contenedor_id))
+                            cursor.execute(sql, (gestion, nro_comprobante, codigo_abc, tipo_documento, contenedor_id, estado_doc))
                         
                         total_insertados += 1
                 

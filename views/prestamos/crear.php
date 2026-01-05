@@ -31,17 +31,24 @@ $pageTitle = 'Nuevo Préstamo';
             </div>
             
             <div class="form-group">
-                <label for="usuario_id">Usuario Solicitante <span class="required">*</span></label>
-                <select id="usuario_id" name="usuario_id" class="form-control" required>
-                    <option value="">Seleccione un usuario...</option>
-                    <?php foreach ($usuarios as $usr): ?>
-                        <option value="<?= $usr['id'] ?>">
-                            <?= htmlspecialchars($usr['nombre_completo']) ?> (<?= htmlspecialchars($usr['username']) ?>)
+                <label for="unidad_area_id">Unidad/Área Solicitante <span class="required">*</span></label>
+                <select id="unidad_area_id" name="unidad_area_id" class="form-control" required>
+                    <option value="">Seleccione una unidad o área...</option>
+                    <?php foreach ($ubicaciones as $ubi): ?>
+                        <option value="<?= $ubi['id'] ?>">
+                            <?= htmlspecialchars($ubi['nombre']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
         </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="nombre_prestatario">Nombre del Prestatario (Opcional)</label>
+                <input type="text" id="nombre_prestatario" name="nombre_prestatario" class="form-control" 
+                       placeholder="Nombre de la persona que retira el documento">
+            </div>
         
         <div class="form-row">
             <div class="form-group">

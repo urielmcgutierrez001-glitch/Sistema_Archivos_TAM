@@ -13,6 +13,7 @@ class Prestamo extends BaseModel
     protected $table = 'prestamos';
     protected $fillable = [
         'documento_tipo',
+        'encabezado_id',
         'documento_id', 
         'contenedor_fisico_id', 
         'usuario_id', 

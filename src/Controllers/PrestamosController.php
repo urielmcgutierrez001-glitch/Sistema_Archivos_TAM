@@ -13,28 +13,34 @@ use TAMEP\Models\RegistroDiario;
 use TAMEP\Models\ContenedorFisico;
 use TAMEP\Models\Usuario;
 use TAMEP\Models\HojaRuta;
+use TAMEP\Models\PrestamoHeader;
+use TAMEP\Models\Ubicacion;
 use TAMEP\Core\Session;
 
 class PrestamosController extends BaseController
 {
-    private $prestamo;
     private $registroDiario;
+    private $prestamo;
+    private $prestamoHeader;
     private $contenedorFisico;
     private $usuario;
     private $hojaRuta;
+    private $ubicacion;
     
     public function __construct()
     {
         parent::__construct();
-        $this->prestamo = new Prestamo();
         $this->registroDiario = new RegistroDiario();
+        $this->prestamo = new Prestamo();
+        $this->prestamoHeader = new PrestamoHeader();
         $this->contenedorFisico = new ContenedorFisico();
         $this->usuario = new Usuario();
         $this->hojaRuta = new HojaRuta();
+        $this->ubicacion = new Ubicacion();
     }
     
     /**
-     * Listar préstamos
+     * Listar préstamos (Agrupados por cabecera)
      */
     public function index()
     {
@@ -44,35 +50,37 @@ class PrestamosController extends BaseController
         $estado = $_GET['estado'] ?? '';
         $usuario_id = $_GET['usuario_id'] ?? '';
         
-        // Construir query
+        // Construir query para encabezados
         $where = [];
         $params = [];
         
         if (!empty($estado)) {
-            $where[] = "p.estado = ?";
+            $where[] = "ph.estado = ?";
             $params[] = $estado;
         }
         
         if (!empty($usuario_id)) {
-            $where[] = "p.usuario_id = ?";
+            $where[] = "ph.usuario_id = ?";
             $params[] = $usuario_id;
         }
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
-        // Obtener préstamos con joins
-        $sql = "SELECT p.*, 
+        // Fetch headers with user info and item count
+        $sql = "SELECT ph.*, 
                        u.nombre_completo as usuario_nombre,
-                       cf.tipo_contenedor, cf.numero as contenedor_numero,
-                       rd.nro_comprobante, rd.gestion
-                FROM prestamos p
-                LEFT JOIN usuarios u ON p.usuario_id = u.id
-                LEFT JOIN contenedores_fisicos cf ON p.contenedor_fisico_id = cf.id
-                LEFT JOIN registro_diario rd ON p.documento_id = rd.id
+                       ub.nombre as unidad_nombre,
+                       ph.nombre_prestatario,
+                       COUNT(p.id) as total_documentos
+                FROM prestamos_encabezados ph
+                LEFT JOIN usuarios u ON ph.usuario_id = u.id
+                LEFT JOIN ubicaciones ub ON ph.unidad_area_id = ub.id
+                LEFT JOIN prestamos p ON ph.id = p.encabezado_id
                 {$whereClause}
-                ORDER BY p.fecha_prestamo DESC";
+                GROUP BY ph.id
+                ORDER BY ph.fecha_prestamo DESC, ph.id DESC";
         
-        $prestamos = $this->prestamo->getDb()->fetchAll($sql, $params);
+        $prestamos = $this->prestamoHeader->getDb()->fetchAll($sql, $params);
         
         // Obtener usuarios para filtro
         $usuarios = $this->usuario->getActive();
@@ -98,12 +106,12 @@ class PrestamosController extends BaseController
         // Obtener documentos disponibles
         $documentos = $this->registroDiario->getAvailable();
         
-        // Obtener usuarios activos
-        $usuarios = $this->usuario->getActive();
+        // Obtener ubicaciones (unidades/áreas)
+        $ubicaciones = $this->ubicacion->getActive();
         
         $this->view('prestamos.crear', [
             'documentos' => $documentos,
-            'usuarios' => $usuarios,
+            'ubicaciones' => $ubicaciones,
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -116,7 +124,7 @@ class PrestamosController extends BaseController
         $this->requireAuth();
         
         // Validar
-        if (empty($_POST['documento_id']) || empty($_POST['usuario_id']) || empty($_POST['fecha_devolucion_esperada'])) {
+        if (empty($_POST['documento_id']) || empty($_POST['unidad_area_id']) || empty($_POST['fecha_devolucion_esperada'])) {
             Session::flash('error', 'Debe completar todos los campos obligatorios');
             $this->redirect('/prestamos/crear');
         }
@@ -128,25 +136,44 @@ class PrestamosController extends BaseController
             $this->redirect('/prestamos/crear');
         }
         
-        // Crear préstamo
-        $data = [
-            'documento_id' => $_POST['documento_id'],
-            'contenedor_fisico_id' => $documento['contenedor_fisico_id'] ?? null,
-            'usuario_id' => $_POST['usuario_id'],
+        // Crear Encabezado
+        $headerData = [
+            'usuario_id' => Session::user()['id'], // El usuario que REGISTRA el préstamo (Admin)
+            'unidad_area_id' => $_POST['unidad_area_id'],
+            'nombre_prestatario' => $_POST['nombre_prestatario'] ?? null,
             'fecha_prestamo' => date('Y-m-d'),
             'fecha_devolucion_esperada' => $_POST['fecha_devolucion_esperada'],
             'observaciones' => $_POST['observaciones'] ?? null,
             'estado' => 'Prestado'
         ];
-        
-        $id = $this->prestamo->create($data);
-        
-        if ($id) {
-            // Actualizar estado del documento
-            $this->registroDiario->update($_POST['documento_id'], ['estado_documento' => 'PRESTADO']);
+
+        $headerId = $this->prestamoHeader->create($headerData);
+
+        if ($headerId) {
+            // Crear préstamo detalle
+            $data = [
+                'encabezado_id' => $headerId,
+                'documento_id' => $_POST['documento_id'],
+                'contenedor_fisico_id' => $documento['contenedor_fisico_id'] ?? null,
+                'usuario_id' => $_POST['usuario_id'],
+                'fecha_prestamo' => date('Y-m-d'),
+                'fecha_devolucion_esperada' => $_POST['fecha_devolucion_esperada'],
+                'observaciones' => $_POST['observaciones'] ?? null,
+                'estado' => 'Prestado'
+            ];
             
-            Session::flash('success', 'Préstamo registrado exitosamente');
-            $this->redirect('/prestamos');
+            $id = $this->prestamo->create($data);
+            
+            if ($id) {
+                // Actualizar estado del documento
+                $this->registroDiario->update($_POST['documento_id'], ['estado_documento' => 'PRESTADO']);
+                
+                Session::flash('success', 'Préstamo registrado exitosamente');
+                $this->redirect('/prestamos');
+            } else {
+                Session::flash('error', 'Error al registrar el detalle del préstamo');
+                $this->redirect('/prestamos/crear');
+            }
         } else {
             Session::flash('error', 'Error al registrar el préstamo');
             $this->redirect('/prestamos/crear');
@@ -156,38 +183,80 @@ class PrestamosController extends BaseController
     /**
      * Procesar devolución
      */
-    public function devolver($id)
+    /**
+     * Actualizar estados de devolución (Bulk Update)
+     */
+    /**
+     * Actualizar estados de devolución (Bulk Update)
+     */
+    public function actualizarEstados()
     {
         $this->requireAuth();
         
-        $prestamo = $this->prestamo->find($id);
+        $encabezado_id = $_POST['encabezado_id'] ?? null;
+        $devueltos = $_POST['devueltos'] ?? []; // IDs checked
+        $action = $_POST['action'] ?? 'actualizar'; // devolver | revertir
         
-        if (!$prestamo) {
-            Session::flash('error', 'Préstamo no encontrado');
+        if (!$encabezado_id) {
+            Session::flash('error', 'ID de préstamo no válido');
             $this->redirect('/prestamos');
         }
+
+        // Get all details for this header
+        $detalles = $this->prestamoHeader->getDetalles($encabezado_id);
         
-        if ($prestamo['estado'] !== 'Prestado') {
-            Session::flash('error', 'Este préstamo ya fue devuelto');
-            $this->redirect('/prestamos');
-        }
+        $changes = 0;
         
-        // Actualizar préstamo
-        $success = $this->prestamo->update($id, [
-            'fecha_devolucion_real' => date('Y-m-d'),
-            'estado' => 'Devuelto'
-        ]);
-        
-        if ($success) {
-            // Actualizar estado del documento
-            $this->registroDiario->update($prestamo['documento_id'], ['estado_documento' => 'DISPONIBLE']);
+        foreach ($detalles as $doc) {
+            $is_checked = in_array($doc['id'], $devueltos);
+            $current_status = $doc['estado'];
             
-            Session::flash('success', 'Devolución registrada exitosamente');
-        } else {
-            Session::flash('error', 'Error al registrar la devolución');
+            if ($action === 'devolver') {
+                // Only process items that are CHECKED and currently PRESTADO
+                if ($is_checked && $current_status === 'Prestado') {
+                    $this->prestamo->update($doc['id'], [
+                        'fecha_devolucion_real' => date('Y-m-d'),
+                        'estado' => 'Devuelto'
+                    ]);
+                    $this->registroDiario->update($doc['documento_id'], ['estado_documento' => 'DISPONIBLE']);
+                    $changes++;
+                }
+            } elseif ($action === 'revertir') {
+                // Process items that are CURRENTLY DEVUELTO but usage UNCHECKED them
+                // This means they want to "un-return" them
+                if (!$is_checked && $current_status === 'Devuelto') {
+                    $this->prestamo->update($doc['id'], [
+                        'fecha_devolucion_real' => null,
+                        'estado' => 'Prestado'
+                    ]);
+                    $this->registroDiario->update($doc['documento_id'], ['estado_documento' => 'PRESTADO']);
+                    $changes++;
+                }
+            }
         }
         
-        $this->redirect('/prestamos');
+        // Update Header Status
+        $newDetalles = $this->prestamoHeader->getDetalles($encabezado_id);
+        $allReturned = true;
+        foreach ($newDetalles as $d) {
+            if ($d['estado'] === 'Prestado') {
+                $allReturned = false;
+                break;
+            }
+        }
+        
+        $this->prestamoHeader->update($encabezado_id, [
+            'estado' => $allReturned ? 'Devuelto' : 'Prestado'
+        ]);
+
+        if ($changes > 0) {
+            $msg = $action === 'devolver' ? 'Documentos devueltos correctamente' : 'Devoluciones revertidas correctamente';
+            Session::flash('success', $msg);
+        } else {
+            Session::flash('info', 'No se realizaron cambios (verifique su selección)');
+        }
+        
+        $this->redirect('/prestamos/ver/' . $encabezado_id);
     }
     
     /**
@@ -274,12 +343,12 @@ class PrestamosController extends BaseController
             $documentos = $this->registroDiario->getDb()->fetchAll($sql, $params);
         }
         
-        // Obtener usuarios activos
-        $usuarios = $this->usuario->getActive();
+        // Obtener ubicaciones
+        $ubicaciones = $this->ubicacion->getActive();
         
         $this->view('prestamos.nuevo', [
             'documentos' => $documentos,
-            'usuarios' => $usuarios,
+            'ubicaciones' => $ubicaciones,
             'filtros' => [
                 'search' => $search,
                 'gestion' => $gestion,
@@ -290,14 +359,14 @@ class PrestamosController extends BaseController
     }
     
     /**
-     * Guardar préstamo múltiple
+     * Guardar préstamo múltiple (con cabecera)
      */
     public function guardarMultiple()
     {
         $this->requireAuth();
         
         // Validar
-        if (empty($_POST['usuario_id']) || empty($_POST['fecha_devolucion']) || empty($_POST['documentos'])) {
+        if (empty($_POST['unidad_area_id']) || empty($_POST['fecha_devolucion']) || empty($_POST['documentos'])) {
             Session::flash('error', 'Debe completar todos los campos obligatorios');
             $this->redirect('/prestamos/nuevo');
         }
@@ -306,6 +375,24 @@ class PrestamosController extends BaseController
         
         if (empty($documentosIds)) {
             Session::flash('error', 'Debe seleccionar al menos un documento');
+            $this->redirect('/prestamos/nuevo');
+        }
+
+        // Crear Encabezado
+        $headerData = [
+            'usuario_id' => Session::user()['id'],
+            'unidad_area_id' => $_POST['unidad_area_id'],
+            'nombre_prestatario' => $_POST['nombre_prestatario'] ?? null,
+            'fecha_prestamo' => date('Y-m-d'),
+            'fecha_devolucion_esperada' => $_POST['fecha_devolucion'],
+            'observaciones' => $_POST['observaciones'] ?? null,
+            'estado' => 'Prestado'
+        ];
+
+        $headerId = $this->prestamoHeader->create($headerData);
+
+        if (!$headerId) {
+            Session::flash('error', 'Error al crear la cabecera del préstamo');
             $this->redirect('/prestamos/nuevo');
         }
         
@@ -320,8 +407,9 @@ class PrestamosController extends BaseController
                 continue;
             }
             
-            // Crear préstamo
+            // Crear préstamo detalle
             $data = [
+                'encabezado_id' => $headerId,
                 'documento_id' => $docId,
                 'contenedor_fisico_id' => $documento['contenedor_fisico_id'] ?? null,
                 'usuario_id' => $_POST['usuario_id'],
@@ -343,40 +431,45 @@ class PrestamosController extends BaseController
         }
         
         if ($exitosos > 0) {
-            Session::flash('success', "Préstamo registrado: {$exitosos} documento(s) prestado(s)" . ($errores > 0 ? ", {$errores} error(es)" : ''));
+            Session::flash('success', "Préstamo registrado: {$exitosos} documento(s) prestado(s)");
         } else {
-            Session::flash('error', 'No se pudo registrar ningún préstamo');
+            // Si fallaron todos, eliminar el header (opcional, pero limpio)
+            // Por ahora solo avisar
+            Session::flash('error', 'No se pudo registrar ningún documento en el préstamo');
         }
         
         $this->redirect('/prestamos');
     }
     
     /**
-     * Ver detalle de préstamo
+     * Ver detalle de grupo de préstamo
      */
     public function ver($id)
     {
         $this->requireAuth();
         
-        $sql = "SELECT p.*, 
+        // Get Header Info
+        $sql = "SELECT ph.*, 
                        u.nombre_completo as usuario_nombre, u.username,
-                       cf.tipo_contenedor, cf.numero as contenedor_numero,
-                       rd.nro_comprobante, rd.gestion, rd.tipo_documento
-                FROM prestamos p
-                LEFT JOIN usuarios u ON p.usuario_id = u.id
-                LEFT JOIN contenedores_fisicos cf ON p.contenedor_fisico_id = cf.id
-                LEFT JOIN registro_diario rd ON p.documento_id = rd.id
-                WHERE p.id = ?";
+                       ub.nombre as unidad_nombre
+                FROM prestamos_encabezados ph
+                LEFT JOIN usuarios u ON ph.usuario_id = u.id
+                LEFT JOIN ubicaciones ub ON ph.unidad_area_id = ub.id
+                WHERE ph.id = ?";
         
-        $prestamo = $this->prestamo->getDb()->fetchOne($sql, [$id]);
+        $prestamo = $this->prestamoHeader->getDb()->fetchOne($sql, [$id]);
         
         if (!$prestamo) {
             Session::flash('error', 'Préstamo no encontrado');
             $this->redirect('/prestamos');
         }
+
+        // Get Details
+        $detalles = $this->prestamoHeader->getDetalles($id);
         
         $this->view('prestamos.detalle', [
             'prestamo' => $prestamo,
+            'detalles' => $detalles,
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -384,5 +477,88 @@ class PrestamosController extends BaseController
     private function getCurrentUser()
     {
         return Session::user();
+    }
+
+    /**
+     * Exportar a Excel (CSV)
+     */
+    public function exportarExcel($id)
+    {
+        $this->requireAuth();
+        
+        // Fetch Header and Details
+        $sql = "SELECT ph.*, u.nombre_completo as usuario_nombre, ub.nombre as unidad_nombre 
+                FROM prestamos_encabezados ph 
+                LEFT JOIN usuarios u ON ph.usuario_id = u.id 
+                LEFT JOIN ubicaciones ub ON ph.unidad_area_id = ub.id
+                WHERE ph.id = ?";
+        $prestamo = $this->prestamoHeader->getDb()->fetchOne($sql, [$id]);
+        
+        if (!$prestamo) {
+            die("Préstamo no encontrado");
+        }
+        
+        $detalles = $this->prestamoHeader->getDetalles($id);
+        
+        // Output headers
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="prestamo_' . $id . '.csv"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Add UTF-8 BOM for Excel
+        fputs($output, "\xEF\xBB\xBF");
+        
+        // Header Info
+        fputcsv($output, ['REPORTE DE PRESTAMO', '#' . $id]);
+        fputcsv($output, ['Solicitante (Unidad):', $prestamo['unidad_nombre'] ?? 'N/A']);
+        fputcsv($output, ['Prestatario:', $prestamo['nombre_prestatario'] ?? 'N/A']);
+        fputcsv($output, ['Registrado por:', $prestamo['usuario_nombre']]);
+        fputcsv($output, ['Fecha Prestamo:', $prestamo['fecha_prestamo']]);
+        fputcsv($output, ['Devolucion Esperada:', $prestamo['fecha_devolucion_esperada']]);
+        fputcsv($output, []); // Empty line
+        
+        // Columns
+        fputcsv($output, ['Gestion', 'Nro Comprobante', 'Tipo Documento', 'Contenedor', 'Numero', 'Ubicacion', 'Estado']);
+        
+        
+        foreach ($detalles as $doc) {
+            fputcsv($output, [
+                $doc['gestion'] ?? '',
+                $doc['nro_comprobante'] ?? '',
+                $doc['tipo_documento'] ?? '',
+                $doc['tipo_contenedor'] ?? '',
+                $doc['contenedor_numero'] ?? '',
+                $doc['ubicacion_fisica'] ?? '',
+                $doc['estado']
+            ]);
+        }
+        
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Exportar a PDF (Vista de Impresión)
+     */
+    public function exportarPdf($id)
+    {
+        $this->requireAuth();
+        
+        $sql = "SELECT ph.*, u.nombre_completo as usuario_nombre, ub.nombre as unidad_nombre 
+                FROM prestamos_encabezados ph 
+                LEFT JOIN usuarios u ON ph.usuario_id = u.id 
+                LEFT JOIN ubicaciones ub ON ph.unidad_area_id = ub.id
+                WHERE ph.id = ?";
+        $prestamo = $this->prestamoHeader->getDb()->fetchOne($sql, [$id]);
+        
+        if (!$prestamo) {
+            die("Préstamo no encontrado");
+        }
+        
+        $detalles = $this->prestamoHeader->getDetalles($id);
+        
+        require __DIR__ . '/../../views/prestamos/pdf_report.php';
+        exit;
     }
 }

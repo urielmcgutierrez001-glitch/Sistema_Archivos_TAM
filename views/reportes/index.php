@@ -86,7 +86,7 @@ $pageTitle = 'Reportes - Préstamos y Documentos';
                             </td>
                             <td><?= date('d/m/Y', strtotime($pres['fecha_prestamo'])) ?></td>
                             <td>
-                                <?= date('d/m/Y', strtotime($pres['fecha_devolucion_estimada'])) ?>
+                                <?= date('d/m/Y', strtotime($pres['fecha_devolucion_esperada'])) ?>
                                 <?php if ($vencido): ?>
                                     <br><span class="badge badge-falta">⚠️ Vencido (<?= abs($pres['dias_restantes']) ?> días)</span>
                                 <?php elseif ($porVencer): ?>

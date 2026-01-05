@@ -19,7 +19,7 @@ class RegistroDiario extends BaseModel
         $sql = "SELECT rd.*, 
                        cf.tipo_contenedor, cf.numero AS contenedor_numero, 
                        cf.color, cf.bloque_nivel,
-                       u.nombre AS ubicacion_nombre
+                       u.nombre AS ubicacion_nombre, u.descripcion AS ubicacion_descripcion
                 FROM {$this->table} rd
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
                 LEFT JOIN ubicaciones u ON cf.ubicacion_id = u.id
