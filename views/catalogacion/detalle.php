@@ -66,6 +66,9 @@ $tipoDocumentoTexto = $tiposDocumento[$documento['tipo_documento'] ?? 'REGISTRO_
                     ?>
                     <span class="badge <?= $badgeClass ?>"><?= $icon ?> <?= htmlspecialchars($estado) ?></span>
                 </dd>
+
+                <dt>Observaciones:</dt>
+                <dd><?= !empty($documento['observaciones']) ? nl2br(htmlspecialchars($documento['observaciones'])) : '<em>Ninguna</em>' ?></dd>
             </dl>
         </div>
         
@@ -74,7 +77,18 @@ $tipoDocumentoTexto = $tiposDocumento[$documento['tipo_documento'] ?? 'REGISTRO_
             <dl class="detail-list">
                 <?php if (!empty($documento['contenedor_fisico_id'])): ?>
                 <dt>Contenedor Físico:</dt>
-                <dd>ID: <?= htmlspecialchars($documento['contenedor_fisico_id']) ?></dd>
+                <dd>
+                    <?php if (!empty($documento['tipo_contenedor']) && !empty($documento['contenedor_numero'])): ?>
+                        <?= htmlspecialchars($documento['tipo_contenedor']) ?> #<?= htmlspecialchars($documento['contenedor_numero']) ?>
+                    <?php else: ?>
+                        ID: <?= htmlspecialchars($documento['contenedor_fisico_id']) ?>
+                    <?php endif; ?>
+                </dd>
+                <?php endif; ?>
+
+                <?php if (!empty($documento['color'])): ?>
+                <dt>Color:</dt>
+                <dd><?= htmlspecialchars($documento['color']) ?></dd>
                 <?php endif; ?>
                 
                 <?php if (isset($documento['ubicacion_nombre'])): ?>
@@ -97,13 +111,6 @@ $tipoDocumentoTexto = $tiposDocumento[$documento['tipo_documento'] ?? 'REGISTRO_
             </dl>
         </div>
     </div>
-    
-    <?php if (!empty($documento['observaciones'])): ?>
-    <div class="detail-section">
-        <h3>Observaciones</h3>
-        <p><?= nl2br(htmlspecialchars($documento['observaciones'])) ?></p>
-    </div>
-    <?php endif; ?>
     
     <div class="detail-actions">
         <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>

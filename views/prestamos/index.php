@@ -45,12 +45,12 @@ $pageTitle = 'Gestión de Préstamos';
         <table class="table">
             <thead>
                 <tr>
-                    <th>Unidad/Área</th>
-                    <th>Fecha Préstamo</th>
-                    <th>Fecha Devolución</th>
-                    <th>Docs</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
+                    <th style="width: 25%;">Unidad/Área</th>
+                    <th class="text-center" style="width: 15%;">Fecha Préstamo</th>
+                    <th class="text-center" style="width: 15%;">Fecha Devolución</th>
+                    <th class="text-center" style="width: 10%;">Docs</th>
+                    <th class="text-center" style="width: 15%;">Estado</th>
+                    <th class="text-center" style="width: 20%;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -65,38 +65,45 @@ $pageTitle = 'Gestión de Préstamos';
                         $rowClass = $vencido ? 'row-vencido' : '';
                     ?>
                         <tr class="<?= $rowClass ?>">
-                            <td>
-                                <strong><?= htmlspecialchars($pres['unidad_nombre'] ?? 'N/A') ?></strong><br>
-                                <small class="text-muted">Prestatario: <?= htmlspecialchars($pres['nombre_prestatario'] ?? 'N/A') ?></small>
+                            <td class="align-middle">
+                                <div class="font-weight-bold" style="font-size: 1.05em; color: #2d3748;">
+                                    <?= htmlspecialchars($pres['unidad_nombre'] ?? 'N/A') ?>
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="icon-user"></i> Prestatario: <?= htmlspecialchars($pres['nombre_prestatario'] ?? 'N/A') ?>
+                                </div>
                             </td>
-                            <td><?= date('d/m/Y', strtotime($pres['fecha_prestamo'])) ?></td>
-                            <td>
+                            <td class="text-center align-middle" style="color: #4a5568;">
+                                <?= date('d/m/Y', strtotime($pres['fecha_prestamo'])) ?>
+                            </td>
+                            <td class="text-center align-middle" style="color: #4a5568;">
                                 <?= date('d/m/Y', strtotime($pres['fecha_devolucion_esperada'])) ?>
                                 <?php if ($vencido): ?>
-                                    <br><span class="badge badge-falta">⚠️ Vencido</span>
+                                    <br><span class="badge badge-falta" style="font-size: 0.75em;">⚠️ Vencido</span>
                                 <?php endif; ?>
                             </td>
-                            <td>
-                                <span class="badge badge-info" style="background:#3182ce; color:white;">
-                                    <?= $pres['total_documentos'] ?> docs
-                                </span>
+                            <td class="text-center align-middle">
+                                <div style="line-height: 1.2; color: #4a5568;">
+                                    <span style="font-size: 1.2em; font-weight: bold; display: block;"><?= $pres['total_documentos'] ?></span>
+                                    <span style="font-size: 0.85em;">docs</span>
+                                </div>
                             </td>
-                            <td>
+                            <td class="text-center align-middle">
                                 <?php if ($pres['estado'] === 'Prestado'): ?>
-                                    <span class="badge badge-prestado">📤 Prestado</span>
+                                    <span class="badge badge-prestado" style="font-weight: 500; letter-spacing: 0.5px;">📥 Prestado</span>
                                 <?php else: ?>
-                                    <span class="badge badge-disponible">✅ Devuelto</span>
+                                    <span class="badge badge-disponible" style="font-weight: 500; letter-spacing: 0.5px;">✅ Devuelto</span>
                                 <?php endif; ?>
                             </td>
-                            <td>
+                            <td class="text-center align-middle">
                                 <div class="btn-group" role="group">
-                                    <a href="/prestamos/ver/<?= $pres['id'] ?>" class="btn btn-sm btn-primary" title="Ver Detalle">
+                                    <a href="/prestamos/ver/<?= $pres['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver Detalle" style="border: 1px solid #ced4da;">
                                         👁️ Ver
                                     </a>
-                                    <a href="/prestamos/exportar-pdf/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-warning" title="PDF">
+                                    <a href="/prestamos/exportar-pdf/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="PDF" style="border: 1px solid #ced4da;">
                                         📄 PDF
                                     </a>
-                                    <a href="/prestamos/exportar-excel/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-success" title="Excel">
+                                    <a href="/prestamos/exportar-excel/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-outline-success" title="Excel" style="border: 1px solid #ced4da;">
                                         📊 Excel
                                     </a>
                                 </div>

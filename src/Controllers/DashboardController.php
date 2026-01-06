@@ -28,6 +28,12 @@ class DashboardController extends BaseController
             'total_libros' => $contenedorFisico->count("tipo_contenedor = 'LIBRO'"),
             'total_amarros' => $contenedorFisico->count("tipo_contenedor = 'AMARRO'"),
             'prestamos_activos' => $prestamo->count("estado = 'Prestado'"),
+            // Stats for Charts
+            'docs_prestados' => $registroDiario->count("estado_documento = 'PRESTADO'"),
+            'docs_faltantes' => $registroDiario->count("estado_documento = 'FALTA'"),
+            'docs_disponibles' => $registroDiario->count("estado_documento = 'DISPONIBLE'"),
+            'docs_no_utilizados' => $registroDiario->count("estado_documento = 'NO UTILIZADO'"),
+            'docs_anulados' => $registroDiario->count("estado_documento = 'ANULADO'"),
         ];
         
         $this->view('dashboard.index', [

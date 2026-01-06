@@ -75,6 +75,13 @@
     transform: rotate(-45deg) translate(5px, -5px);
 }
 
+/* Centrar el botón toggle cuando está colapsado */
+.sidebar.collapsed .sidebar-toggle {
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+}
+
 /* Ocultar textos cuando está colapsado */
 .sidebar.collapsed .sidebar-header h1,
 .sidebar.collapsed .user-info,
@@ -105,7 +112,8 @@
 }
 
 .sidebar.collapsed .sidebar-header {
-    padding-top: 60px;
+    padding: 60px 5px 15px 5px;
+    /* Reducir padding horizontal para que quepa el logo */
 }
 
 .sidebar-logo {
@@ -240,6 +248,12 @@ details summary::marker {
     display: none;
     content: "";
 }
+
+/* Ocultar flecha del summary cuando está colapsado */
+.sidebar.collapsed details>summary::after {
+    display: none;
+}
+
 
 /* Sección de logout */
 .sidebar-footer {

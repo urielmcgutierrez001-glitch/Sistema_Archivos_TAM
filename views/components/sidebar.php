@@ -67,10 +67,26 @@ $user = $user ?? \TAMEP\Core\Session::user();
             <?php endif; ?>
             
             <li>
-                <a href="/normalizacion" class="sidebar-link">
-                    <span class="icon">⚙️</span>
-                    <span>Normalización</span>
-                </a>
+                <details <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/herramientas') ? 'open' : '' ?>>
+                    <summary class="sidebar-link" style="cursor: pointer;">
+                        <span class="icon">🛠️</span>
+                        <span>Herramientas</span>
+                    </summary>
+                    <ul class="sidebar-submenu">
+                        <li><a href="/herramientas/control-amarros">📦 Control Amarros</a></li>
+                    </ul>
+                </details>
+            </li>
+            <li>
+                <details <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/configuracion') ? 'open' : '' ?>>
+                    <summary class="sidebar-link" style="cursor: pointer;">
+                        <span class="icon">🔧</span>
+                        <span>Configuración</span>
+                    </summary>
+                    <ul class="sidebar-submenu">
+                        <li><a href="/configuracion/password">🔑 Cambiar Contraseña</a></li>
+                    </ul>
+                </details>
             </li>
         </ul>
         

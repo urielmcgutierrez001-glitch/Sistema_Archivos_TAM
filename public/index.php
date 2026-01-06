@@ -69,8 +69,15 @@ $router->get('/admin/usuarios/editar/{id}', 'UsuariosController@editar', ['AuthM
 $router->post('/admin/usuarios/actualizar/{id}', 'UsuariosController@actualizar', ['AuthMiddleware']);
 $router->get('/admin/usuarios/eliminar/{id}', 'UsuariosController@eliminar', ['AuthMiddleware']);
 
+// Herramientas
+$router->get('/herramientas/control-amarros', 'HerramientasController@controlAmarros', ['AuthMiddleware']);
+
 // Normalización (solo admin) - TODO: Crear NormalizacionController
 // $router->get('/normalizacion', 'NormalizacionController@index', ['AuthMiddleware']);
+
+// Configuración
+$router->get('/configuracion/password', 'ConfiguracionController@password', ['AuthMiddleware']);
+$router->post('/configuracion/password/actualizar', 'ConfiguracionController@updatePassword', ['AuthMiddleware']);
 
 // Ejecutar router
 $router->dispatch();

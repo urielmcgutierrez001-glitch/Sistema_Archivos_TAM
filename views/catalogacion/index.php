@@ -122,6 +122,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
                             </th>
                         <?php endif; ?>
                         <th>Gestión</th>
+                        <th>Tipo</th>
                         <th>Nro Comprobante</th>
                         <th>Código ABC</th>
                         <th>Contenedor</th>
@@ -133,6 +134,22 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
                 <tbody>
                     <?php foreach ($documentos as $doc): 
                         $estado = $doc['estado_documento'] ?? 'DISPONIBLE';
+                        $tipo = $doc['tipo_documento'] ?? '';
+                        
+                        // Abbreviate Type
+                        $abrev = 'N/A';
+                        switch($tipo) {
+                            case 'REGISTRO_DIARIO': $abrev = 'DIA'; break;
+                            case 'REGISTRO_INGRESO': $abrev = 'ING'; break;
+                            case 'REGISTRO_CEPS': $abrev = 'CEPS'; break;
+                            case 'PREVENTIVOS': $abrev = 'PRE'; break;
+                            case 'ASIENTOS_MANUALES': $abrev = 'MAN'; break;
+                            case 'DIARIOS_APERTURA': $abrev = 'DAP'; break;
+                            case 'REGISTRO_TRASPASO': $abrev = 'TRA'; break;
+                            case 'HOJA_RUTA_DIARIOS': $abrev = 'HRD'; break;
+                            default: $abrev = substr($tipo, 0, 3); 
+                        }
+
                         $rowClass = '';
                         switch($estado) {
                             case 'FALTA':
@@ -164,6 +181,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
                                 </td>
                             <?php endif; ?>
                             <td><?= htmlspecialchars($doc['gestion'] ?? 'N/A') ?></td>
+                            <td><span class="badge" style="background-color: #6c757d;" title="<?= htmlspecialchars($tipo) ?>"><?= htmlspecialchars($abrev) ?></span></td>
                             <td><?= htmlspecialchars($doc['nro_comprobante'] ?? 'N/A') ?></td>
                             <td><?= htmlspecialchars($doc['codigo_abc'] ?? 'N/A') ?></td>
                             <td>

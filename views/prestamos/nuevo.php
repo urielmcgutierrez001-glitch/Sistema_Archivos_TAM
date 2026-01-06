@@ -103,7 +103,7 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
     <div id="documentos-seleccionados" style="display: none; padding: 20px; background: #f0f9ff; border-top: 2px solid #3182CE;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 style="color: #1B3C84; margin: 0;">📋 Documentos Seleccionados (<span id="selected-count">0</span>)</h3>
-            <button type="button" class="btn btn-success" onclick="procesarPrestamo()" id="btn-procesar">
+            <button type="button" class="btn btn-primary" onclick="procesarPrestamo()" id="btn-procesar">
                 📤 Procesar Préstamo (<span id="count">0</span> docs)
             </button>
         </div>
