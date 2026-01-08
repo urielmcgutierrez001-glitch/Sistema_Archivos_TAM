@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev
 
 # Instalar extensiones de PHP requeridas
-RUN docker-php-ext-install pdo_mysql zip gd mbstring
+RUN docker-php-ext-install pdo_mysql zip gd mbstring xml
 
 # Habilitar mod_rewrite de Apache (necesario para rutas amigables)
 RUN a2enmod rewrite
