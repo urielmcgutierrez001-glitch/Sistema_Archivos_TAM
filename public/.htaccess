@@ -1,4 +1,5 @@
 <IfModule mod_rewrite.c>
+    Options +FollowSymLinks
     RewriteEngine On
     
     # Redirigir todo a index.php (excepto archivos y directorios existentes)
