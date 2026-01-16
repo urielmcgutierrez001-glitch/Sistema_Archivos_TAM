@@ -62,6 +62,7 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
                     <th>Gestión</th>
                     <th>Nro Comprobante</th>
                     <th>Contenedor</th>
+                    <th>Ubicación</th>
                     <th>Estado</th>
                 </tr>
             </thead>
@@ -72,14 +73,54 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
                     </tr>
                 <?php else: ?>
                     <?php foreach ($documentos as $doc): ?>
-                        <tr>
+                        <?php 
+                            $estado = $doc['estado_documento'] ?? 'DISPONIBLE';
+                            $esPrestable = in_array($estado, ['DISPONIBLE', 'NO UTILIZADO', 'ANULADO']);
+                            
+                            // Badge color logic
+                            $badgeClass = 'badge-secondary';
+                            $estadoIcon = '⚪';
+                            
+                            switch ($estado) {
+                                case 'DISPONIBLE':
+                                    $badgeClass = 'badge-disponible';
+                                    $estadoIcon = '🟢';
+                                    break;
+                                case 'NO UTILIZADO':
+                                    $badgeClass = 'badge-inutilizado'; // Assuming this class exists or uses generic yellow
+                                    $estadoIcon = '🟡';
+                                    break;
+                                case 'ANULADO':
+                                    $badgeClass = 'badge-anulado'; // Assuming purple/dark
+                                    $estadoIcon = '🟣';
+                                    break;
+                                case 'FALTA':
+                                    $badgeClass = 'badge-falta'; // Red
+                                    $estadoIcon = '🔴';
+                                    break;
+                                case 'PRESTADO':
+                                    $badgeClass = 'badge-prestado'; // Orange
+                                    $estadoIcon = '🟠';
+                                    break;
+                            }
+                            
+                            // Inline styles for badges if classes are missing in this view
+                            $badgeStyle = "";
+                            if ($estado === 'NO UTILIZADO') $badgeStyle = "background-color: #ffc107; color: #333;";
+                            elseif ($estado === 'ANULADO') $badgeStyle = "background-color: #6f42c1; color: white;";
+                            elseif ($estado === 'FALTA') $badgeStyle = "background-color: #dc3545; color: white;";
+                            elseif ($estado === 'PRESTADO') $badgeStyle = "background-color: #fd7e14; color: white;";
+                            elseif ($estado === 'DISPONIBLE') $badgeStyle = "background-color: #28a745; color: white;";
+                        ?>
+                        <tr style="<?= !$esPrestable ? 'background: #fcfcfc;' : '' ?>">
                             <td>
                                 <input type="checkbox" class="doc-checkbox" 
                                        value="<?= $doc['id'] ?>"
                                        data-tipo="<?= htmlspecialchars($doc['tipo_documento'] ?? 'N/A') ?>"
                                        data-gestion="<?= htmlspecialchars($doc['gestion'] ?? 'N/A') ?>"
                                        data-comprobante="<?= htmlspecialchars($doc['nro_comprobante'] ?? 'N/A') ?>"
-                                       data-contenedor="<?= !empty($doc['contenedor_numero']) ? htmlspecialchars($doc['tipo_contenedor'] . ' #' . $doc['contenedor_numero']) : 'Sin asignar' ?>">
+                                       data-contenedor="<?= !empty($doc['contenedor_numero']) ? htmlspecialchars($doc['tipo_contenedor'] . ' #' . $doc['contenedor_numero']) : 'Sin asignar' ?>"
+                                       data-ubicacion="<?= htmlspecialchars($doc['ubicacion_fisica'] ?? 'Sin ubicación') ?>">
                             </td>
                             <td><?= htmlspecialchars($doc['tipo_documento'] ?? 'N/A') ?></td>
                             <td><?= htmlspecialchars($doc['gestion'] ?? 'N/A') ?></td>
@@ -91,7 +132,14 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
                                     <span style="color: #999;">Sin asignar</span>
                                 <?php endif; ?>
                             </td>
-                            <td><span class="badge badge-disponible">🟢 Disponible</span></td>
+                            <td>
+                                <small><?= htmlspecialchars($doc['ubicacion_fisica'] ?? 'Sin ubicación') ?></small>
+                            </td>
+                            <td>
+                                <span class="badge" style="padding: 5px 10px; border-radius: 4px; font-size: 0.85em; font-weight: 500; <?= $badgeStyle ?>">
+                                    <?= $estadoIcon ?> <?= ucfirst(strtolower(str_replace('_', ' ', $estado))) ?>
+                                </span>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -114,7 +162,7 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
                 <label for="unidad_area_solicitante">Unidad/Área Solicitante <span class="required">*</span></label>
                 <select id="unidad_area_solicitante" class="form-control">
                     <option value="">Seleccione...</option>
-                    <?php foreach ($ubicaciones as $ubi): ?>
+                    <?php foreach ($unidades as $ubi): ?>
                         <option value="<?= $ubi['id'] ?>"><?= htmlspecialchars($ubi['nombre']) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -229,7 +277,8 @@ function actualizarSeleccion() {
             tipo: checkbox.dataset.tipo,
             gestion: checkbox.dataset.gestion,
             comprobante: checkbox.dataset.comprobante,
-            contenedor: checkbox.dataset.contenedor
+            contenedor: checkbox.dataset.contenedor,
+            ubicacion: checkbox.dataset.ubicacion
         });
     });
     
@@ -245,7 +294,8 @@ function actualizarSeleccion() {
                 tipo: doc.tipo,
                 gestion: doc.gestion,
                 comprobante: doc.comprobante,
-                contenedor: doc.contenedor
+                contenedor: doc.contenedor,
+                ubicacion: doc.ubicacion
             });
         }
     });
@@ -276,6 +326,7 @@ function mostrarLista() {
                 Gestión ${doc.gestion} - 
                 #${doc.comprobante} 
                 <small style="color: #666;">(${doc.contenedor})</small>
+                <div style="font-size: 0.85em; color: #4a5568;">📍 ${doc.ubicacion}</div>
             </div>
             <button onclick="quitarDocumento('${doc.id}')">✕ Quitar</button>
         </div>

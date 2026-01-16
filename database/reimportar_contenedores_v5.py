@@ -41,7 +41,12 @@ def encontrar_columna(df, patrones, excluir_primera=False):
     inicio = 1 if excluir_primera and len(columnas) > 1 else 0
     
     for col in columnas[inicio:]:
-        col_limpio = col.strip().replace('\n', ' ').replace('  ', ' ')
+        # Manejar columnas que no son strings (ej: float/nan)
+        if hasattr(col, 'strip'):
+            col_limpio = col.strip().replace('\n', ' ').replace('  ', ' ')
+        else:
+            col_limpio = str(col).strip()
+            
         for patron in patrones:
             if patron.lower() in col_limpio.lower():
                 return col
@@ -114,7 +119,7 @@ try:
         print("\n📋 Verificando valores de tipo_documento en BD...")
         cursor.execute("""
             SELECT tipo_documento, COUNT(*) as cantidad 
-            FROM registro_diario 
+            FROM documentos 
             WHERE tipo_documento IS NOT NULL
             GROUP BY tipo_documento
             ORDER BY cantidad DESC
@@ -145,16 +150,16 @@ try:
         else:
             print("   ✅ Columna ya existe")
         
-        # Limpiar
-        print("\n🗑️  Limpiando contenedores anteriores...")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
-        cursor.execute("UPDATE registro_diario SET contenedor_fisico_id = NULL")
-        cursor.execute("UPDATE registro_hojas_ruta SET contenedor_fisico_id = NULL")
-        cursor.execute("UPDATE registro_egreso SET contenedor_fisico_id = NULL")
-        cursor.execute("DELETE FROM contenedores_fisicos")
-        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
-        connection.commit()
-        print("   ✅ Limpieza completada")
+        # Limpiar (COMENTADO PARA ACTUALIZACIÓN)
+        print("\n🗑️  Limpiando contenedores anteriores... (OMITIDO)")
+        # cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        # cursor.execute("UPDATE documentos SET contenedor_fisico_id = NULL")
+        # cursor.execute("UPDATE documentos SET contenedor_fisico_id = NULL WHERE tipo_documento = 'HOJA_RUTA_DIARIOS'")
+        # cursor.execute("INSERT INTO registro_hojas_ruta ...") # ya estaba obsoleto
+        # cursor.execute("DELETE FROM contenedores_fisicos")
+        # cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+        # connection.commit()
+        print("   ✅ Limpieza omitida, actualizando existentes...")
         
         # Cargar ubicaciones
         cursor.execute("SELECT id, nombre FROM ubicaciones")
@@ -186,6 +191,13 @@ try:
             print(f"{'='*80}")
             
             df = pd.read_excel(ruta)
+            
+            # Detectar si se leyó el título como header (caso CEPS)
+            columnas_str = "".join([str(c) for c in df.columns])
+            if "REGISTRO DE DOCUMENTACIÓN DE EGRESO" in columnas_str.upper():
+                print("   ⚠️  Detectado título en primera fila, recargando con header=1...")
+                df = pd.read_excel(ruta, header=1)
+            
             print(f"   📊 {len(df)} filas en Excel")
             
             col_contenedor = encontrar_columna(df, ['LIBRO', 'AMARR'], excluir_primera=True)
@@ -256,25 +268,34 @@ try:
                         ubicacion_bd = mapeo_ubicaciones.get(ubicacion_nombre, ubicacion_nombre)
                         ubicacion_id = ubicaciones_cache.get(ubicacion_bd)
                     
-                    # Clave única: tipo_contenedor + numero + tipo_documento
-                    clave_contenedor = f"{tipo}-{numero}-{tipo_doc_excel}"
+                    # Clave única: tipo_contenedor + numero + tipo_documento + atributos físicos
+                    clave_contenedor = f"{tipo}-{numero}-{tipo_doc_excel}-{bloque}-{color}-{ubicacion_id}"
                     
                     if clave_contenedor not in contenedores_cache:
                         cursor.execute(
                             """SELECT id FROM contenedores_fisicos 
-                               WHERE tipo_contenedor = %s AND numero = %s AND tipo_documento = %s""",
-                            (tipo, numero, tipo_doc_excel)
+                               WHERE tipo_contenedor = %s 
+                               AND numero = %s 
+                               AND tipo_documento = %s
+                               AND (bloque_nivel = %s OR (bloque_nivel IS NULL AND %s IS NULL))
+                               AND (color = %s OR (color IS NULL AND %s IS NULL))
+                               AND (ubicacion_id = %s OR (ubicacion_id IS NULL AND %s IS NULL))
+                            """,
+                            (tipo, numero, tipo_doc_excel, bloque, bloque, color, color, ubicacion_id, ubicacion_id)
                         )
                         resultado = cursor.fetchone()
                         
                         if resultado:
                             contenedor_id = resultado['id']
+                            # Actualizar gestion si existe en el excel
+                            if gestion:
+                                cursor.execute("UPDATE contenedores_fisicos SET gestion = %s WHERE id = %s", (gestion, contenedor_id))
                         else:
                             cursor.execute("""
                                 INSERT INTO contenedores_fisicos 
-                                (tipo_contenedor, tipo_documento, numero, bloque_nivel, color, ubicacion_id, activo)
-                                VALUES (%s, %s, %s, %s, %s, %s, 1)
-                            """, (tipo, tipo_doc_excel, numero, bloque, color, ubicacion_id))
+                                (tipo_contenedor, tipo_documento, numero, bloque_nivel, color, ubicacion_id, gestion, activo)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, 1)
+                            """, (tipo, tipo_doc_excel, numero, bloque, color, ubicacion_id, gestion))
                             contenedor_id = cursor.lastrowid
                             contenedores_creados += 1
                         
@@ -285,7 +306,7 @@ try:
                     # *** CAMBIO PRINCIPAL: Usar tipo_documento en vez de tabla_origen ***
                     if gestion and comprobante and contenedor_id:
                         cursor.execute("""
-                            UPDATE registro_diario
+                            UPDATE documentos
                             SET contenedor_fisico_id = %s,
                                 codigo_abc = %s
                             WHERE gestion = %s 
@@ -312,10 +333,10 @@ try:
         cursor.execute("SELECT COUNT(*) as total FROM contenedores_fisicos")
         total_contenedores = cursor.fetchone()['total']
         
-        cursor.execute("SELECT COUNT(*) as total FROM registro_diario WHERE contenedor_fisico_id IS NOT NULL")
+        cursor.execute("SELECT COUNT(*) as total FROM documentos WHERE contenedor_fisico_id IS NOT NULL")
         total_asignados = cursor.fetchone()['total']
         
-        cursor.execute("SELECT COUNT(*) as total FROM registro_diario")
+        cursor.execute("SELECT COUNT(*) as total FROM documentos")
         total_docs = cursor.fetchone()['total']
         
         print(f"\n{'='*80}")
@@ -332,7 +353,7 @@ try:
             SELECT tipo_documento, 
                    COUNT(*) as total,
                    SUM(CASE WHEN contenedor_fisico_id IS NOT NULL THEN 1 ELSE 0 END) as con_contenedor
-            FROM registro_diario
+            FROM documentos
             GROUP BY tipo_documento
             ORDER BY tipo_documento
         """)

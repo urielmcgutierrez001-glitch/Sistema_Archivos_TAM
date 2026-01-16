@@ -34,7 +34,7 @@ $pageTitle = 'Nuevo Préstamo';
                 <label for="unidad_area_id">Unidad/Área Solicitante <span class="required">*</span></label>
                 <select id="unidad_area_id" name="unidad_area_id" class="form-control" required>
                     <option value="">Seleccione una unidad o área...</option>
-                    <?php foreach ($ubicaciones as $ubi): ?>
+                    <?php foreach ($unidades as $ubi): ?>
                         <option value="<?= $ubi['id'] ?>">
                             <?= htmlspecialchars($ubi['nombre']) ?>
                         </option>

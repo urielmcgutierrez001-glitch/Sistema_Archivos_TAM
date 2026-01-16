@@ -46,6 +46,8 @@ $pageTitle = 'Gestión de Usuarios';
                             </td>
                             <td>
                                 <a href="/admin/usuarios/editar/<?= $usr['id'] ?>" class="btn btn-sm btn-secondary">✏️ Editar</a>
+                                <button onclick="confirmarReset(<?= $usr['id'] ?>, '<?= htmlspecialchars($usr['username']) ?>')" 
+                                        class="btn btn-sm btn-warning" title="Resetear contraseña y enviar por correo">🔑 Reset</button>
                                 <?php if ($usr['id'] != $user['id']): ?>
                                     <button onclick="confirmarEliminacion(<?= $usr['id'] ?>, '<?= htmlspecialchars($usr['username']) ?>')" 
                                             class="btn btn-sm btn-danger">🗑️ Eliminar</button>
@@ -75,6 +77,12 @@ $pageTitle = 'Gestión de Usuarios';
 function confirmarEliminacion(id, username) {
     if (confirm(`¿Está seguro que desea eliminar al usuario "${username}"?\n\nEsta acción no se puede deshacer.`)) {
         window.location.href = '/admin/usuarios/eliminar/' + id;
+    }
+}
+
+function confirmarReset(id, username) {
+    if (confirm(`¿Resetear la contraseña del usuario "${username}"?\n\nSe generará una nueva contraseña y se enviará por correo.`)) {
+        window.location.href = '/admin/usuarios/reset-password/' + id;
     }
 }
 </script>

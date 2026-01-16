@@ -10,15 +10,64 @@ namespace TAMEP\Controllers;
 
 use TAMEP\Models\Usuario;
 use TAMEP\Core\Session;
+use TAMEP\Services\MailService;
 
 class UsuariosController extends BaseController
 {
     private $usuario;
+    private $mailService;
     
     public function __construct()
     {
         parent::__construct();
         $this->usuario = new Usuario();
+        $this->mailService = new MailService();
+    }
+    
+    /**
+     * Resetear contraseña de usuario (Solo Admin)
+     */
+    public function resetPassword($id)
+    {
+        $this->requireAuth();
+        
+        // Check Admin Role
+        if (Session::user()['rol'] !== 'Administrador') {
+            Session::flash('error', 'No tiene permisos para realizar esta acción');
+            $this->redirect('/');
+        }
+        
+        $user = $this->usuario->find($id);
+        if (!$user) {
+            Session::flash('error', 'Usuario no encontrado');
+            $this->redirect('/admin/usuarios');
+        }
+        
+        // Generate Random Password
+        $newPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 8);
+        
+        // Update DB
+        $data = [
+            'password_hash' => password_hash($newPassword, PASSWORD_DEFAULT)
+        ];
+        
+        if ($this->usuario->update($id, $data)) {
+            // Send Email (Hardcoded recipient for testing as requested)
+            // "enviar a un correo especifico... de momento urielm.cgutierrez001@gmail.com"
+            $recipient = 'urielm.cgutierrez001@gmail.com';
+            
+            $sent = $this->mailService->sendPasswordReset($recipient, $user['username'], $newPassword);
+            
+            if ($sent) {
+                Session::flash('success', "Contraseña reseteada correctamente. Se envió un correo a $recipient con la nueva clave.");
+            } else {
+                Session::flash('warning', "Contraseña reseteada, pero falló el envío del correo. (Revise logs)");
+            }
+        } else {
+            Session::flash('error', 'Error al actualizar la contraseña en base de datos');
+        }
+        
+        $this->redirect('/admin/usuarios');
     }
     
     /**

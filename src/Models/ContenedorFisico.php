@@ -26,6 +26,56 @@ class ContenedorFisico extends BaseModel
     {
         return $this->where("tipo_contenedor = 'AMARRO'", [], $limit);
     }
+
+    /**
+     * Buscar contenedores con filtros
+     */
+    public function buscar($filtros = [])
+    {
+        $sql = "SELECT c.*, u.nombre as ubicacion_nombre, t.nombre as tipo_documento_nombre, t.codigo as tipo_documento_codigo
+                FROM {$this->table} c 
+                LEFT JOIN ubicaciones u ON c.ubicacion_id = u.id 
+                LEFT JOIN tipo_documento t ON c.tipo_documento_id = t.id
+                WHERE 1=1";
+        
+        $params = [];
+        
+        if (!empty($filtros['tipo_documento'])) {
+            // Check if input is numeric (ID) or string (Code/Name)
+            if (is_numeric($filtros['tipo_documento'])) {
+                 $sql .= " AND c.tipo_documento_id = ?";
+                 $params[] = $filtros['tipo_documento'];
+            } else {
+                 $sql .= " AND (t.nombre LIKE ? OR t.codigo LIKE ?)";
+                 $params[] = '%' . $filtros['tipo_documento'] . '%';
+                 $params[] = '%' . $filtros['tipo_documento'] . '%';
+            }
+        }
+        
+        if (!empty($filtros['numero'])) {
+            $sql .= " AND c.numero = ?";
+            $params[] = $filtros['numero'];
+        }
+        
+        if (!empty($filtros['gestion'])) {
+            $sql .= " AND c.gestion = ?";
+            $params[] = $filtros['gestion'];
+        }
+        
+        if (!empty($filtros['tipo_contenedor'])) {
+            $sql .= " AND c.tipo_contenedor = ?";
+            $params[] = $filtros['tipo_contenedor'];
+        }
+        
+        if (!empty($filtros['ubicacion_id'])) {
+            $sql .= " AND c.ubicacion_id = ?";
+            $params[] = $filtros['ubicacion_id'];
+        }
+
+        $sql .= " ORDER BY c.id DESC";
+        
+        return $this->db->fetchAll($sql, $params);
+    }
     
     /**
      * Verificar si está disponible para préstamo
@@ -47,5 +97,43 @@ class ContenedorFisico extends BaseModel
         $result = $this->db->fetchOne($sql, [$id]);
         
         return $result['total'] == 0;
+    }
+
+    /**
+     * Obtener documentos del contenedor
+     */
+    public function getDocumentos($id)
+    {
+        $sql = "SELECT id, tipo_documento, nro_comprobante, gestion, observaciones 
+                FROM documentos 
+                WHERE contenedor_fisico_id = ? 
+                ORDER BY gestion DESC, nro_comprobante ASC";
+        return $this->db->fetchAll($sql, [$id]);
+    }
+
+    /**
+     * Actualizar contenido (Remover documentos desmarcados)
+     */
+    public function actualizarContenido($contenedorId, $idsMantener = [])
+    {
+        // Si no hay IDs para mantener, vaciar todo el contenedor
+        if (empty($idsMantener)) {
+            $sql = "UPDATE documentos SET contenedor_fisico_id = NULL WHERE contenedor_fisico_id = ?";
+            return $this->db->query($sql, [$contenedorId]);
+        }
+        
+        // Desvincular los que NO están en la lista de mantener
+        // Crear placeholders para el array (e.g., ?, ?, ?)
+        $placeholders = str_repeat('?,', count($idsMantener) - 1) . '?';
+        
+        $sql = "UPDATE documentos 
+                SET contenedor_fisico_id = NULL 
+                WHERE contenedor_fisico_id = ? 
+                AND id NOT IN ($placeholders)";
+        
+        // Merge container ID with the list of IDs to keep
+        $params = array_merge([$contenedorId], $idsMantener);
+        
+        return $this->db->query($sql, $params);
     }
 }

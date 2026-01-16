@@ -14,6 +14,23 @@ $pageTitle = 'Detalle de Préstamo';
             <a href="/prestamos/exportar-excel/<?= $prestamo['id'] ?>" target="_blank" class="btn btn-success">
                 📊 Excel
             </a>
+            
+            <?php if ($prestamo['estado'] === 'En Proceso'): ?>
+                <a href="/prestamos/procesar/<?= $prestamo['id'] ?>" class="btn btn-primary">
+                    ⚙️ Procesar
+                </a>
+            <?php else: ?>
+                <!-- Si ya está prestado (y no devuelto completamente), permitir verificar de nuevo (revertir a En Proceso) -->
+                 <?php if ($prestamo['estado'] !== 'Devuelto'): ?>
+                    <a href="/prestamos/revertirProceso/<?= $prestamo['id'] ?>" class="btn btn-warning" onclick="return confirm('¿Volver a estado En Proceso? Esto permitirá corregir la lista de documentos faltantes.');">
+                        ↩ Verificar
+                    </a>
+                <?php endif; ?>
+                <button class="btn btn-secondary" disabled style="opacity: 0.5; cursor: not-allowed;">
+                    ⚙️ Procesar
+                </button>
+            <?php endif; ?>
+
             <a href="/prestamos" class="btn btn-secondary">← Volver</a>
         </div>
     </div>
@@ -66,7 +83,10 @@ $pageTitle = 'Detalle de Préstamo';
         <?php endif; ?>
     </div>
 
-    <!-- Documents List -->
+    <!-- Documents List - Split Sections -->
+
+    <!-- Section 1: Prestados -->
+    <?php if (!empty($prestados)): ?>
     <div class="documents-section" style="margin-top: 20px; padding: 20px;">
         <h3>📚 Documentos Prestados</h3>
         
@@ -82,12 +102,13 @@ $pageTitle = 'Detalle de Préstamo';
                             </th>
                             <th>Documento</th>
                             <th>Contenedor</th>
+                            <th>Ubicación</th>
                             <th>Estado Actual</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($detalles as $doc): ?>
+                        <?php foreach ($prestados as $doc): ?>
                         <tr>
                             <td>
                                 <input type="checkbox" name="devueltos[]" value="<?= $doc['id'] ?>" class="check-item"
@@ -108,12 +129,15 @@ $pageTitle = 'Detalle de Préstamo';
                                 <?php endif; ?>
                             </td>
                             <td>
+                                <small><?= htmlspecialchars($doc['ubicacion_fisica'] ?? 'N/A') ?></small>
+                            </td>
+                            <td>
                                 <?php if ($doc['estado'] === 'Prestado'): ?>
                                     <span class="badge badge-prestado">📤 Prestado</span>
                                 <?php else: ?>
                                     <span class="badge badge-disponible">✅ Devuelto</span>
                                     <small class="d-block text-muted">
-                                        <?= date('d/m/Y', strtotime($doc['fecha_devolucion_real'])) ?>
+                                        <?= !empty($doc['fecha_devolucion_real']) ? date('d/m/Y', strtotime($doc['fecha_devolucion_real'])) : '' ?>
                                     </small>
                                 <?php endif; ?>
                             </td>
@@ -140,6 +164,64 @@ $pageTitle = 'Detalle de Préstamo';
             </div>
         </form>
     </div>
+    <?php endif; ?>
+
+    <!-- Section 2: No Prestados -->
+    <?php if (!empty($noPrestados)): ?>
+    <div class="documents-section" style="margin-top: 20px; padding: 20px; border-top: 4px solid #6c757d;">
+        <h3>🚫 Documentos No Prestados / Faltantes</h3>
+        
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th width="50">#</th>
+                        <th>Documento</th>
+                        <th>Contenedor</th>
+                        <th>Ubicación</th>
+                        <th>Estado en Préstamo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($noPrestados as $doc): ?>
+                    <tr>
+                        <td class="text-muted">⏹</td>
+                        <td>
+                            <strong><?= htmlspecialchars($doc['tipo_documento'] ?? 'N/A') ?></strong><br>
+                            <small>
+                                Gestión: <?= htmlspecialchars($doc['gestion'] ?? 'N/A') ?> 
+                                | Nro: <?= htmlspecialchars($doc['nro_comprobante'] ?? 'N/A') ?>
+                            </small>
+                        </td>
+                        <td>
+                            <?php if ($doc['tipo_contenedor']): ?>
+                                <?= htmlspecialchars($doc['tipo_contenedor']) ?> #<?= htmlspecialchars($doc['contenedor_numero']) ?>
+                            <?php else: ?>
+                                <span class="text-muted">N/A</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <small><?= htmlspecialchars($doc['ubicacion_fisica'] ?? 'N/A') ?></small>
+                        </td>
+                        <td>
+                            <?php if ($doc['estado'] === 'Falta'): ?>
+                                <span class="badge badge-falta" style="background-color: #dc3545; color: white;">❌ FALTA</span>
+                            <?php elseif ($doc['estado'] === 'En Proceso'): ?>
+                                    <span class="badge badge-warning" style="background-color: #ffc107; color: black;">⏳ En Proceso</span>
+                            <?php elseif ($doc['estado'] === 'No Prestado'): ?>
+                                    <span class="badge badge-secondary" style="background-color: #6c757d; color: white;">🚫 No Prestado</span>
+                            <?php else: ?>
+                                <span class="badge"><?= htmlspecialchars($doc['estado']) ?></span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-muted mt-2"><small>Estos documentos no fueron entregados. Si hay algun cambio, seleccione "Verificar" arriba para volver a procesar el préstamo.</small></p>
+    </div>
+    <?php endif; ?>
 </div>
 
 <style>

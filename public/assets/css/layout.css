@@ -208,16 +208,20 @@
     margin: 0;
 }
 
-.sidebar-submenu a {
-    padding: 10px 20px 10px 56px;
+.sidebar .sidebar-submenu a {
+    padding: 10px 20px 10px 35px;
+    /* Reduced to ~half of 70px as requested */
     font-size: 14px;
     color: rgba(255, 255, 255, 0.75);
+    display: flex;
+    /* Ensure block/flex layout */
+    width: 100%;
 }
 
-.sidebar-submenu a:hover {
+.sidebar .sidebar-submenu a:hover {
     background: rgba(255, 255, 255, 0.1);
     color: white;
-    padding-left: 60px;
+    padding-left: 40px;
 }
 
 .sidebar-submenu a.active {

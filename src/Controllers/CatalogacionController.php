@@ -7,28 +7,31 @@
 
 namespace TAMEP\Controllers;
 
-use TAMEP\Models\RegistroDiario;
+use TAMEP\Models\Documento;
 use TAMEP\Models\Ubicacion;
 use TAMEP\Models\UnidadArea;
 use TAMEP\Models\ContenedorFisico;
-use TAMEP\Models\HojaRuta;
+use TAMEP\Models\TipoDocumento;
+// use TAMEP\Models\HojaRuta; // Deprecated
 
 class CatalogacionController extends BaseController
 {
-    private $registroDiario;
+    private $documento;
     private $ubicacion;
     private $unidadArea;
     private $contenedorFisico;
-    private $hojaRuta;
+    private $tipoDocumento;
+    // private $hojaRuta;
     
     public function __construct()
     {
         parent::__construct();
-        $this->registroDiario = new RegistroDiario();
+        $this->documento = new Documento();
         $this->ubicacion = new Ubicacion();
         $this->unidadArea = new UnidadArea();
         $this->contenedorFisico = new ContenedorFisico();
-        $this->hojaRuta = new HojaRuta();
+        $this->tipoDocumento = new TipoDocumento();
+        // $this->hojaRuta = new HojaRuta();
     }
     
     /**
@@ -48,24 +51,9 @@ class CatalogacionController extends BaseController
         $perPage = 20;
         
         // Realizar búsqueda - usar HojaRuta si es ese tipo
-        if ($tipo_documento === 'HOJA_RUTA_DIARIOS') {
-            // Buscar en registro_hojas_ruta
-            $documentos = $this->hojaRuta->buscarAvanzado([
-                'search' => $search,
-                'gestion' => $gestion,
-                'ubicacion_id' => $ubicacion_id,
-                'page' => $page,
-                'per_page' => $perPage
-            ]);
-            
-            $total = $this->hojaRuta->contarBusqueda([
-                'search' => $search,
-                'gestion' => $gestion,
-                'ubicacion_id' => $ubicacion_id
-            ]);
-        } else if ($search || $gestion || $ubicacion_id || $estado_documento || $tipo_documento) {
-            // Buscar en registro_diario (otros tipos)
-            $documentos = $this->registroDiario->buscarAvanzado([
+        if ($search || $gestion || $ubicacion_id || $estado_documento || $tipo_documento) {
+            // Buscar en documentos (otros tipos)
+            $documentos = $this->documento->buscarAvanzado([
                 'search' => $search,
                 'gestion' => $gestion,
                 'ubicacion_id' => $ubicacion_id,
@@ -75,7 +63,7 @@ class CatalogacionController extends BaseController
                 'per_page' => $perPage
             ]);
             
-            $total = $this->registroDiario->contarBusqueda([
+            $total = $this->documento->contarBusqueda([
                 'search' => $search,
                 'gestion' => $gestion,
                 'ubicacion_id' => $ubicacion_id,
@@ -84,11 +72,11 @@ class CatalogacionController extends BaseController
             ]);
         } else {
             // Sin filtros, mostrar los más recientes usando buscarAvanzado sin filtros
-            $documentos = $this->registroDiario->buscarAvanzado([
+            $documentos = $this->documento->buscarAvanzado([
                 'page' => $page,
                 'per_page' => $perPage
             ]);
-            $total = $this->registroDiario->count();
+            $total = $this->documento->count();
         }
         
         // Obtener datos para filtros
@@ -97,7 +85,7 @@ class CatalogacionController extends BaseController
         // Calcular paginación
         $totalPages = ceil($total / $perPage);
         
-        $this->view('catalogacion.index', [
+        $this->view('documentos.index', [
             'documentos' => $documentos,
             'ubicaciones' => $ubicaciones,
             'filtros' => [
@@ -113,6 +101,7 @@ class CatalogacionController extends BaseController
                 'total' => $total,
                 'total_pages' => $totalPages
             ],
+            'contenedores' => $this->contenedorFisico->all(),
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -124,7 +113,7 @@ class CatalogacionController extends BaseController
     {
         $this->requireAuth();
         
-        $documento = $this->registroDiario->findWithContenedor($id);
+        $documento = $this->documento->findWithContenedor($id);
         
         if (!$documento) {
             \TAMEP\Core\Session::flash('error', 'Documento no encontrado');
@@ -135,7 +124,7 @@ class CatalogacionController extends BaseController
             $documento['unidad'] = $this->unidadArea->find($documento['unidad_id']);
         }
         
-        $this->view('catalogacion.detalle', [
+        $this->view('documentos.detalle', [
             'documento' => $documento,
             'user' => $this->getCurrentUser()
         ]);
@@ -151,7 +140,7 @@ class CatalogacionController extends BaseController
         // Obtener contenedores para el select
         $contenedores = $this->contenedorFisico->all();
         
-        $this->view('catalogacion.crear', [
+        $this->view('documentos.crear', [
             'contenedores' => $contenedores,
             'user' => $this->getCurrentUser()
         ]);
@@ -173,6 +162,7 @@ class CatalogacionController extends BaseController
         // Preparar datos
         $data = [
             'tipo_documento' => $_POST['tipo_documento'],
+            'tipo_documento_id' => ($tipo = $this->tipoDocumento->findByCode($_POST['tipo_documento'])) ? $tipo['id'] : null,
             'gestion' => $_POST['gestion'],
             'nro_comprobante' => $_POST['nro_comprobante'],
             'codigo_abc' => $_POST['codigo_abc'] ?? null,
@@ -183,7 +173,7 @@ class CatalogacionController extends BaseController
         ];
         
         // Guardar
-        $id = $this->registroDiario->create($data);
+        $id = $this->documento->create($data);
         
         if ($id) {
             \TAMEP\Core\Session::flash('success', 'Documento creado exitosamente');
@@ -201,7 +191,7 @@ class CatalogacionController extends BaseController
     {
         $this->requireAuth();
         
-        $documento = $this->registroDiario->find($id);
+        $documento = $this->documento->find($id);
         
         if (!$documento) {
             \TAMEP\Core\Session::flash('error', 'Documento no encontrado');
@@ -211,9 +201,10 @@ class CatalogacionController extends BaseController
         // Obtener contenedores para el select
         $contenedores = $this->contenedorFisico->all();
         
-        $this->view('catalogacion.editar', [
+        $this->view('documentos.editar', [
             'documento' => $documento,
             'contenedores' => $contenedores,
+            'ubicaciones' => $this->ubicacion->all(), // Pass locations for filtering
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -225,7 +216,7 @@ class CatalogacionController extends BaseController
     {
         $this->requireAuth();
         
-        $documento = $this->registroDiario->find($id);
+        $documento = $this->documento->find($id);
         
         if (!$documento) {
             \TAMEP\Core\Session::flash('error', 'Documento no encontrado');
@@ -235,6 +226,7 @@ class CatalogacionController extends BaseController
         // Preparar datos
         $data = [
             'tipo_documento' => $_POST['tipo_documento'],
+            'tipo_documento_id' => ($tipo = $this->tipoDocumento->findByCode($_POST['tipo_documento'])) ? $tipo['id'] : null,
             'gestion' => $_POST['gestion'],
             'nro_comprobante' => $_POST['nro_comprobante'],
             'codigo_abc' => $_POST['codigo_abc'] ?? null,
@@ -244,7 +236,7 @@ class CatalogacionController extends BaseController
         ];
         
         // Actualizar
-        $success = $this->registroDiario->update($id, $data);
+        $success = $this->documento->update($id, $data);
         
         if ($success) {
             \TAMEP\Core\Session::flash('success', 'Documento actualizado exitosamente');
@@ -262,7 +254,7 @@ class CatalogacionController extends BaseController
     {
         $this->requireAuth();
         
-        $documento = $this->registroDiario->find($id);
+        $documento = $this->documento->find($id);
         
         if (!$documento) {
             \TAMEP\Core\Session::flash('error', 'Documento no encontrado');
@@ -270,7 +262,7 @@ class CatalogacionController extends BaseController
         }
         
         // Eliminar
-        $success = $this->registroDiario->delete($id);
+        $success = $this->documento->delete($id);
         
         if ($success) {
             \TAMEP\Core\Session::flash('success', 'Documento eliminado exitosamente');
@@ -281,6 +273,36 @@ class CatalogacionController extends BaseController
         $this->redirect('/catalogacion');
     }
     
+    /**
+     * Actualizar contenedor de un lote de documentos
+     */
+    public function actualizarLoteContenedor()
+    {
+        $this->requireAuth();
+        
+        $ids = $_POST['ids'] ?? [];
+        $contenedor_id = $_POST['contenedor_id'] ?? null;
+        
+        if (empty($ids) || empty($contenedor_id)) {
+            \TAMEP\Core\Session::flash('error', 'Debe seleccionar documentos y un contenedor');
+            $this->redirect('/catalogacion?modo_lotes=1');
+        }
+        
+        // Decodificar IDs si vienen como string JSON (opcional, dependiendo de como lo enviemos)
+        if (is_string($ids)) {
+            $ids = json_decode($ids, true);
+        }
+        
+        $count = 0;
+        foreach ($ids as $id) {
+            $this->documento->update($id, ['contenedor_fisico_id' => $contenedor_id]);
+            $count++;
+        }
+        
+        \TAMEP\Core\Session::flash('success', "Se actualizaron $count documentos al nuevo contenedor");
+        $this->redirect('/catalogacion?modo_lotes=1');
+    }
+
     private function getCurrentUser()
     {
         return \TAMEP\Core\Session::user();

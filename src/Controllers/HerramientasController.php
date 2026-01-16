@@ -21,6 +21,25 @@ class HerramientasController extends BaseController
         ]);
     }
 
+    /**
+     * Juego de Varita Mágica (Solo para VIVI)
+     */
+    public function varitaMagica()
+    {
+        $this->requireAuth();
+        $user = $this->getCurrentUser();
+        
+        // Verificar restricción de usuario (case insensitive)
+        if (strtoupper($user['username']) !== 'VIVI') {
+            \TAMEP\Core\Session::flash('error', 'No tienes permiso para ver esta magia ✨');
+            $this->redirect('/dashboard');
+        }
+        
+        $this->view('herramientas.varita_magica', [
+            'user' => $user
+        ]);
+    }
+
     private function getCurrentUser()
     {
         return \TAMEP\Core\Session::user();

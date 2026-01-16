@@ -16,10 +16,10 @@ from datetime import datetime
 # CONFIGURACIÓN DE BASE DE DATOS
 # =====================================================
 DB_CONFIG = {
-    'host': 'bf7yz05jw1xmnb2vukrs-mysql.services.clever-cloud.com',
-    'user': 'uh5uxh0yxbs9cxva',
-    'password': 'HdTIK6C8X5M5qsQUTXoE',
-    'database': 'bf7yz05jw1xmnb2vukrs',
+    'host': 'localhost',
+    'user': 'root',
+    'password': '',
+    'database': 'tamep_archivos',
     'charset': 'utf8mb4',
     'cursorclass': pymysql.cursors.DictCursor
 }
@@ -256,6 +256,13 @@ def importar_excel(tipo_documento, archivo_excel):
     # Leer Excel
     try:
         df = pd.read_excel(ruta_completa)
+        
+        # Detectar si se leyó el título como header (caso CEPS)
+        columnas_str = "".join([str(c) for c in df.columns])
+        if "REGISTRO DE DOCUMENTACIÓN DE EGRESO" in columnas_str.upper():
+            print("   ⚠️  Detectado título en primera fila, recargando con header=1...")
+            df = pd.read_excel(ruta_completa, header=1)
+            
         print(f"📊 Filas en Excel: {len(df)}")
     except Exception as e:
         print(f"❌ ERROR al leer Excel: {e}")
@@ -284,7 +291,9 @@ def importar_excel(tipo_documento, archivo_excel):
                         'COMPROBANTE DE CONTABILIDAD TRASPASO',
                         'NRO INGRESO', 'NRO. INGRESO', 'NRO. CEPS',
                         'NRO COMPROBANTE DE CONTABILIDAD EGRESO',
-                        'NRO COMPROBANTE DE CONTABILIDAD INGRESO'
+                        'NRO COMPROBANTE DE CONTABILIDAD INGRESO',
+                        'REGISTRO DE DOCUMENTACIÓN DE EGRESO DE LA SECCIÓN CONTABILIDAD',
+                        'NRO. COMPROBANTE DE CONTABILIDAD TRASPASO'
                     ])
                     
                     if col_comprobante:
@@ -348,25 +357,41 @@ def importar_excel(tipo_documento, archivo_excel):
                             col_interesado = obtener_columna_mapeada(df, ['INTERESADO'])
                             interesado = limpiar_valor(fila[col_interesado]) if col_interesado else None
                             
+                            # Obtener observaciones
+                            col_obs = obtener_columna_mapeada(df, ['OBSERVACIONES', 'OBS.', 'OBS'])
+                            observaciones = limpiar_valor(fila[col_obs]) if col_obs else None
+
                             sql = """
-                                INSERT IGNORE INTO registro_hojas_ruta 
-                                (gestion, nro_comprobante_diario, nro_hoja_ruta, conam, rubro, 
-                                interesado, contenedor_fisico_id, activo)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, 1)
+                                INSERT INTO documentos 
+                                (gestion, nro_comprobante, contenedor_fisico_id, observaciones, 
+                                estado_documento, tipo_documento, fecha_creacion, fecha_modificacion, atributos_extra)
+                                VALUES (%s, %s, %s, %s, 'DISPONIBLE', 'HOJA_RUTA_DIARIOS', NOW(), NOW(), %s)
                             """
-                            cursor.execute(sql, (gestion, nro_comprobante, nro_hr, conam, rubro, interesado, contenedor_id))
+                            # Crear JSON para atributos extra
+                            import json
+                            atributos = json.dumps({
+                                'nro_comprobante_diario': nro_comprobante,
+                                'nro_hoja_ruta': nro_hr,
+                                'conam': conam,
+                                'rubro': rubro,
+                                'interesado': interesado
+                            })
+                            cursor.execute(sql, (gestion, nro_hr, contenedor_id, observaciones, atributos))
                         else:
-                            # Resto de documentos van a registro_diario
+                            # Obtener observaciones
+                            col_obs = obtener_columna_mapeada(df, ['OBSERVACIONES', 'OBS.', 'OBS'])
+                            observaciones = limpiar_valor(fila[col_obs]) if col_obs else None
+
                             # Detectar estado del documento
                             estado_doc = detectar_estado_documento(fila, df)
                             
                             sql = """
-                                INSERT IGNORE INTO registro_diario 
+                                INSERT INTO documentos 
                                 (gestion, nro_comprobante, codigo_abc, tipo_documento, 
-                                contenedor_fisico_id, estado_documento)
-                                VALUES (%s, %s, %s, %s, %s, %s)
+                                contenedor_fisico_id, estado_documento, observaciones, fecha_creacion, fecha_modificacion)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
                             """
-                            cursor.execute(sql, (gestion, nro_comprobante, codigo_abc, tipo_documento, contenedor_id, estado_doc))
+                            cursor.execute(sql, (gestion, nro_comprobante, codigo_abc, tipo_documento, contenedor_id, estado_doc, observaciones))
                         
                         total_insertados += 1
                 

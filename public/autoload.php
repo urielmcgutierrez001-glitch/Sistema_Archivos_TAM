@@ -3,6 +3,9 @@
  * Autoloader PSR-4
  */
 
+// Cargar autoloader de Composer
+require_once __DIR__ . '/../vendor/autoload.php';
+
 spl_autoload_register(function ($class) {
     // Namespace base del proyecto
     $prefix = 'TAMEP\\';

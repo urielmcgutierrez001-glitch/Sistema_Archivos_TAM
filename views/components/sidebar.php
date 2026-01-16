@@ -31,10 +31,17 @@ $user = $user ?? \TAMEP\Core\Session::user();
             </li>
             
             <li>
-                <a href="/catalogacion" class="sidebar-link">
-                    <span class="icon">📂</span>
-                    <span>Catalogación</span>
-                </a>
+                <details <?= (str_contains($_SERVER['REQUEST_URI'] ?? '', '/catalogacion') || str_contains($_SERVER['REQUEST_URI'] ?? '', '/contenedores') || str_contains($_SERVER['REQUEST_URI'] ?? '', '/configuracion/tipos')) ? 'open' : '' ?>>
+                    <summary class="sidebar-link" style="cursor: pointer;">
+                        <span class="icon">📂</span>
+                        <span>Documentos</span>
+                    </summary>
+                    <ul class="sidebar-submenu">
+                        <li><a href="/catalogacion">📄 Buscar Documentos</a></li>
+                        <li><a href="/contenedores">📦 Buscar Contenedores</a></li>
+                        <li><a href="/configuracion/tipos">📄 Tipos de Documento</a></li>
+                    </ul>
+                </details>
             </li>
             
             <li>
@@ -46,6 +53,7 @@ $user = $user ?? \TAMEP\Core\Session::user();
                     <ul class="sidebar-submenu">
                         <li><a href="/prestamos">📋 Historial</a></li>
                         <li><a href="/prestamos/nuevo">➕ Nuevo Préstamo</a></li>
+                        <li><a href="/prestamos/importar">📊 Importar Excel</a></li>
                     </ul>
                 </details>
             </li>
@@ -74,11 +82,14 @@ $user = $user ?? \TAMEP\Core\Session::user();
                     </summary>
                     <ul class="sidebar-submenu">
                         <li><a href="/herramientas/control-amarros">📦 Control Amarros</a></li>
+                        <?php if (strtoupper($user['username'] ?? '') === 'VIVI'): ?>
+                        <li><a href="/herramientas/varita-magica">✨ Varita Mágica</a></li>
+                        <?php endif; ?>
                     </ul>
                 </details>
             </li>
             <li>
-                <details <?= str_contains($_SERVER['REQUEST_URI'] ?? '', '/configuracion') ? 'open' : '' ?>>
+                <details <?= (str_contains($_SERVER['REQUEST_URI'] ?? '', '/configuracion') && !str_contains($_SERVER['REQUEST_URI'] ?? '', '/configuracion/tipos')) ? 'open' : '' ?>>
                     <summary class="sidebar-link" style="cursor: pointer;">
                         <span class="icon">🔧</span>
                         <span>Configuración</span>

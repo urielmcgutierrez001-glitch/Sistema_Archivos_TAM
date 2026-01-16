@@ -6,7 +6,7 @@
     <title><?= $pageTitle ?? 'Sistema TAMEP' ?></title>
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="stylesheet" href="/assets/css/main.css">
-    <link rel="stylesheet" href="/assets/css/layout.css">
+    <link rel="stylesheet" href="/assets/css/layout.css?v=<?= time() ?>">
 </head>
 <body>
     <div class="layout">

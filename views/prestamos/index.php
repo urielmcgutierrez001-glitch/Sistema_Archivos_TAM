@@ -6,7 +6,10 @@ $pageTitle = 'Gestión de Préstamos';
 <div class="card">
     <div class="card-header flex-between">
         <h2>📤 Gestión de Préstamos</h2>
-        <a href="/prestamos/crear" class="btn btn-primary">➕ Nuevo Préstamo</a>
+        <div class="header-actions">
+            <a href="/prestamos/importar" class="btn btn-secondary">📊 Importar Excel</a>
+            <a href="/prestamos/crear" class="btn btn-primary">➕ Nuevo Préstamo</a>
+        </div>
     </div>
     
     <!-- Filtros -->
@@ -96,7 +99,16 @@ $pageTitle = 'Gestión de Préstamos';
                                 <?php endif; ?>
                             </td>
                             <td class="text-center align-middle">
-                                <div class="btn-group" role="group">
+                                    <?php if ($pres['estado'] == 'En Proceso'): ?>
+                                        <a href="/prestamos/procesar/<?= $pres['id'] ?>" class="btn btn-sm btn-outline-warning" title="Procesar" style="border: 1px solid #ced4da;">
+                                            ⚙️ Procesar
+                                        </a>
+                                    <?php else: ?>
+                                        <button class="btn btn-sm btn-outline-secondary" disabled style="border: 1px solid #ced4da; opacity: 0.5; cursor: not-allowed;" title="Ya procesado">
+                                            ⚙️ Procesar
+                                        </button>
+                                    <?php endif; ?>
+                                    
                                     <a href="/prestamos/ver/<?= $pres['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver Detalle" style="border: 1px solid #ced4da;">
                                         👁️ Ver
                                     </a>

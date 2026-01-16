@@ -9,21 +9,21 @@
 namespace TAMEP\Controllers;
 
 use TAMEP\Models\Prestamo;
-use TAMEP\Models\RegistroDiario;
+use TAMEP\Models\Documento;
 use TAMEP\Models\Usuario;
 use TAMEP\Core\Session;
 
 class ReportesController extends BaseController
 {
     private $prestamo;
-    private $registroDiario;
+    private $documento;
     private $usuario;
     
     public function __construct()
     {
         parent::__construct();
         $this->prestamo = new Prestamo();
-        $this->registroDiario = new RegistroDiario();
+        $this->documento = new Documento();
         $this->usuario = new Usuario();
     }
     
@@ -56,7 +56,7 @@ class ReportesController extends BaseController
                        DATEDIFF(p.fecha_devolucion_esperada, CURDATE()) as dias_restantes
                 FROM prestamos p
                 INNER JOIN usuarios u ON p.usuario_id = u.id
-                INNER JOIN registro_diario rd ON p.documento_id = rd.id
+                INNER JOIN documentos rd ON p.documento_id = rd.id
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
                 WHERE p.estado = 'Prestado'
                 ORDER BY p.fecha_devolucion_esperada ASC";
@@ -75,7 +75,7 @@ class ReportesController extends BaseController
                                         WHEN rd.estado_documento = 'PRESTADO' THEN u.nombre_completo
                                         ELSE NULL
                                     END as prestado_a_usuario
-                            FROM registro_diario rd
+                            FROM documentos rd
                             LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
                             LEFT JOIN prestamos p ON rd.id = p.documento_id AND p.estado = 'Prestado'
                             LEFT JOIN usuarios u ON p.usuario_id = u.id
@@ -85,7 +85,7 @@ class ReportesController extends BaseController
                                 rd.gestion DESC,
                                 rd.nro_comprobante DESC";
         
-        $documentosNoDisponibles = $this->registroDiario->getDb()->fetchAll($sqlNoDisponibles);
+        $documentosNoDisponibles = $this->documento->getDb()->fetchAll($sqlNoDisponibles);
         
         // Estadísticas rápidas
         $stats = [

@@ -45,6 +45,7 @@ $router->get('/catalogacion/ver/{id}', 'CatalogacionController@ver', ['AuthMiddl
 $router->get('/catalogacion/editar/{id}', 'CatalogacionController@editar', ['AuthMiddleware']);
 $router->post('/catalogacion/actualizar/{id}', 'CatalogacionController@actualizar', ['AuthMiddleware']);
 $router->get('/catalogacion/eliminar/{id}', 'CatalogacionController@eliminar', ['AuthMiddleware']);
+$router->post('/catalogacion/lote/actualizar-contenedor', 'CatalogacionController@actualizarLoteContenedor', ['AuthMiddleware']);
 
 // Préstamos
 $router->get('/prestamos', 'PrestamosController@index', ['AuthMiddleware']);
@@ -57,9 +58,22 @@ $router->post('/prestamos/actualizarEstados', 'PrestamosController@actualizarEst
 $router->get('/prestamos/devolver/{id}', 'PrestamosController@devolver', ['AuthMiddleware']);
 $router->get('/prestamos/exportar-pdf/{id}', 'PrestamosController@exportarPdf', ['AuthMiddleware']);
 $router->get('/prestamos/exportar-excel/{id}', 'PrestamosController@exportarExcel', ['AuthMiddleware']);
+$router->get('/prestamos/importar', 'PrestamosController@vistaImportar', ['AuthMiddleware']);
+$router->post('/prestamos/importar/procesar', 'PrestamosController@procesarImportacion', ['AuthMiddleware']);
+$router->get('/prestamos/procesar/{id}', 'PrestamosController@procesar', ['AuthMiddleware']);
+$router->post('/prestamos/confirmarProceso', 'PrestamosController@confirmarProceso', ['AuthMiddleware']);
+$router->get('/prestamos/revertirProceso/{id}', 'PrestamosController@revertirProceso', ['AuthMiddleware']);
 
 // Reportes
 $router->get('/reportes', 'ReportesController@index', ['AuthMiddleware']);
+
+// Contenedores
+$router->get('/contenedores', 'ContenedoresController@index', ['AuthMiddleware']);
+$router->get('/contenedores/crear', 'ContenedoresController@crear', ['AuthMiddleware']);
+$router->post('/contenedores/guardar', 'ContenedoresController@guardar', ['AuthMiddleware']);
+$router->get('/contenedores/editar/{id}', 'ContenedoresController@editar', ['AuthMiddleware']);
+$router->post('/contenedores/actualizar/{id}', 'ContenedoresController@actualizar', ['AuthMiddleware']);
+$router->get('/contenedores/eliminar/{id}', 'ContenedoresController@eliminar', ['AuthMiddleware']);
 
 // Usuarios (solo administrador)
 $router->get('/admin/usuarios', 'UsuariosController@index', ['AuthMiddleware']);
@@ -68,14 +82,24 @@ $router->post('/admin/usuarios/guardar', 'UsuariosController@guardar', ['AuthMid
 $router->get('/admin/usuarios/editar/{id}', 'UsuariosController@editar', ['AuthMiddleware']);
 $router->post('/admin/usuarios/actualizar/{id}', 'UsuariosController@actualizar', ['AuthMiddleware']);
 $router->get('/admin/usuarios/eliminar/{id}', 'UsuariosController@eliminar', ['AuthMiddleware']);
+$router->get('/admin/usuarios/reset-password/{id}', 'UsuariosController@resetPassword', ['AuthMiddleware']);
 
 // Herramientas
 $router->get('/herramientas/control-amarros', 'HerramientasController@controlAmarros', ['AuthMiddleware']);
+$router->get('/herramientas/varita-magica', 'HerramientasController@varitaMagica', ['AuthMiddleware']);
 
 // Normalización (solo admin) - TODO: Crear NormalizacionController
 // $router->get('/normalizacion', 'NormalizacionController@index', ['AuthMiddleware']);
 
 // Configuración
+$router->get('/configuracion/tipos', 'ConfiguracionController@tipos', ['AuthMiddleware']);
+$router->get('/configuracion/tipos/crear', 'ConfiguracionController@crearTipo', ['AuthMiddleware']); // Fix internal redirect to this route
+$router->get('/configuracion/crearTipo', 'ConfiguracionController@crearTipo', ['AuthMiddleware']); // Alias for controller redirect
+$router->post('/configuracion/tipos/guardar', 'ConfiguracionController@guardarTipo', ['AuthMiddleware']);
+$router->get('/configuracion/tipos/editar/{id}', 'ConfiguracionController@editarTipo', ['AuthMiddleware']);
+$router->post('/configuracion/tipos/actualizar/{id}', 'ConfiguracionController@actualizarTipo', ['AuthMiddleware']);
+$router->get('/configuracion/tipos/eliminar/{id}', 'ConfiguracionController@eliminarTipo', ['AuthMiddleware']);
+
 $router->get('/configuracion/password', 'ConfiguracionController@password', ['AuthMiddleware']);
 $router->post('/configuracion/password/actualizar', 'ConfiguracionController@updatePassword', ['AuthMiddleware']);
 

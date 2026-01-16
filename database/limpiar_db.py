@@ -6,10 +6,10 @@ Ejecuta en Clever Cloud MySQL
 import pymysql
 
 DB_CONFIG = {
-    'host': 'bf7yz05jw1xmnb2vukrs-mysql.services.clever-cloud.com',
-    'user': 'uh5uxh0yxbs9cxva',
-    'password': 'HdTIK6C8X5M5qsQUTXoE',
-    'database': 'bf7yz05jw1xmnb2vukrs',
+    'host': 'localhost',
+    'user': 'root',
+    'password': '',
+    'database': 'tamep_archivos',
     'charset': 'utf8mb4',
     'cursorclass': pymysql.cursors.DictCursor
 }
@@ -36,10 +36,10 @@ try:
         cursor.execute("DELETE FROM clasificacion_contenedor_documento WHERE id > 0")
         print("   ✓ Clasificaciones eliminadas")
         
-        cursor.execute("TRUNCATE TABLE registro_diario")
-        print("   ✓ Registros diarios eliminados")
+        cursor.execute("TRUNCATE TABLE documentos")
+        print("   ✓ Documentos eliminados")
         
-        cursor.execute("TRUNCATE TABLE registro_hojas_ruta")
+        cursor.execute("TRUNCATE TABLE registro_hojas_ruta") # Tabla obsoleta
         print("   ✓ Hojas de ruta eliminadas")
         
         cursor.execute("DELETE FROM contenedores_fisicos WHERE id > 0")
@@ -48,8 +48,7 @@ try:
         # Resetear auto_increment
         print("\n🔄 Reseteando auto_increment...")
         cursor.execute("ALTER TABLE contenedores_fisicos AUTO_INCREMENT = 1")
-        cursor.execute("ALTER TABLE registro_diario AUTO_INCREMENT = 1")
-        cursor.execute("ALTER TABLE registro_hojas_ruta AUTO_INCREMENT = 1")
+        cursor.execute("ALTER TABLE documentos AUTO_INCREMENT = 1")
         cursor.execute("ALTER TABLE clasificacion_contenedor_documento AUTO_INCREMENT = 1")
         cursor.execute("ALTER TABLE prestamos AUTO_INCREMENT = 1")
         print("   ✓ Auto_increment reseteado")
@@ -59,8 +58,8 @@ try:
         cursor.execute("SELECT COUNT(*) as total FROM contenedores_fisicos")
         print(f"   Contenedores: {cursor.fetchone()['total']}")
         
-        cursor.execute("SELECT COUNT(*) as total FROM registro_diario")
-        print(f"   Registros diarios: {cursor.fetchone()['total']}")
+        cursor.execute("SELECT COUNT(*) as total FROM documentos")
+        print(f"   Documentos: {cursor.fetchone()['total']}")
         
         cursor.execute("SELECT COUNT(*) as total FROM registro_hojas_ruta")
         print(f"   Hojas de ruta: {cursor.fetchone()['total']}")
