@@ -235,16 +235,55 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
         
         <?php if ($paginacion['total_pages'] > 1): ?>
             <div class="pagination">
-                <?php if ($paginacion['page'] > 1): ?>
-                    <a href="?<?= http_build_query(array_merge($filtros, ['page' => $paginacion['page'] - 1, 'modo_lotes' => $modoLotes ? '1' : null])) ?>" class="btn btn-secondary">← Anterior</a>
+                <?php 
+                    $current = $paginacion['page'];
+                    $total = $paginacion['total_pages'];
+                    $max_visible = 10;
+                    
+                    // Calcular rango de páginas
+                    $start = max(1, $current - floor($max_visible / 2));
+                    $end = min($total, $start + $max_visible - 1);
+                    
+                    if ($end - $start + 1 < $max_visible) {
+                        $start = max(1, $end - $max_visible + 1);
+                    }
+                    
+                    // Parametros base
+                    $params = array_merge($filtros, ['modo_lotes' => $modoLotes ? '1' : null]);
+                ?>
+
+                <!-- Botón Primero -->
+                <?php if ($current > 1): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => 1])) ?>" class="btn btn-secondary">⇤ Primero</a>
+                <?php endif; ?>
+
+                <!-- Botón Anterior -->
+                <?php if ($current > 1): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => $current - 1])) ?>" class="btn btn-warning">← Anterior</a>
+                <?php else: ?>
+                    <button class="btn btn-secondary" disabled>← Anterior</button>
                 <?php endif; ?>
                 
-                <span class="page-info">
-                    Página <?= $paginacion['page'] ?> de <?= $paginacion['total_pages'] ?>
-                </span>
+                <!-- Números de Página -->
+                <div class="pagination-numbers">
+                    <?php for ($i = $start; $i <= $end; $i++): ?>
+                        <a href="?<?= http_build_query(array_merge($params, ['page' => $i])) ?>" 
+                           class="btn <?= $i == $current ? 'btn-primary active' : 'btn-light' ?> page-num">
+                            <?= $i ?>
+                        </a>
+                    <?php endfor; ?>
+                </div>
                 
-                <?php if ($paginacion['page'] < $paginacion['total_pages']): ?>
-                    <a href="?<?= http_build_query(array_merge($filtros, ['page' => $paginacion['page'] + 1, 'modo_lotes' => $modoLotes ? '1' : null])) ?>" class="btn btn-secondary">Siguiente →</a>
+                <!-- Botón Siguiente -->
+                <?php if ($current < $total): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => $current + 1])) ?>" class="btn btn-warning">Siguiente →</a>
+                <?php else: ?>
+                    <button class="btn btn-secondary" disabled>Siguiente →</button>
+                <?php endif; ?>
+
+                <!-- Botón Último -->
+                <?php if ($current < $total): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => $total])) ?>" class="btn btn-secondary">Último ⇥</a>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
@@ -255,7 +294,20 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
 .search-form { padding: 20px; }
 .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
 .form-group { flex: 1; min-width: 200px; }
-.form-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+.form-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; align-items: center; }
+.form-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 14px;
+    height: 38px; /* Force consistent height */
+    box-sizing: border-box;
+    text-decoration: none;
+    line-height: normal;
+    border: 1px solid transparent; /* Ensure border width is accounted for */
+    cursor: pointer;
+}
 .table-responsive { overflow-x: auto; }
 .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; padding: 20px; }
 .page-info { padding: 8px 16px; }
@@ -288,6 +340,79 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
     cursor: pointer;
 }
 
+/* Pagination Styles */
+.pagination { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    gap: 8px; /* Slightly larger gap between groups */
+    padding: 25px 0; 
+    flex-wrap: wrap; 
+}
+.pagination-numbers { 
+    display: flex; 
+    gap: 2px; /* Small gap between numbers */
+    background: #fff;
+    padding: 3px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+.btn-light { 
+    background: white; 
+    border: none; 
+    color: #007bff; 
+    font-weight: 500;
+}
+.btn-light:hover {
+    background-color: #e9ecef;
+    color: #0056b3;
+    text-decoration: none;
+}
+.btn-warning { 
+    background: #ffc107; 
+    color: #212529; 
+    border: 1px solid #ffc107; 
+    font-weight: 500;
+}
+.btn-warning:hover {
+    background: #e0a800;
+    border-color: #d39e00;
+    color: #212529;
+}
+.btn-secondary {
+    background: #6c757d;
+    border: 1px solid #6c757d;
+    color: white;
+}
+.btn-secondary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+.pagination .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    min-width: 38px;
+    padding: 0 12px;
+    border-radius: 4px; /* Slight radius */
+    font-size: 14px;
+    transition: all 0.2s;
+    line-height: normal; /* Fix vertical alignment */
+}
+.page-num { 
+    border-radius: 2px; /* Squared numbers inside the group */
+}
+.btn-primary.active { 
+    background: #1B3C84; 
+    border-color: #1B3C84; 
+    color: white; 
+    cursor: default; 
+    z-index: 1;
+}
+.btn-primary.active:focus {
+    box-shadow: none;
+}
 #seleccionar-todos {
     width: 18px;
     height: 18px;

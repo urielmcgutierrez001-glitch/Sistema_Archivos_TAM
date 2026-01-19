@@ -211,7 +211,7 @@ class Documento extends BaseModel
                     $max = $temp;
                 }
                 
-                $where[] = "rd.nro_comprobante BETWEEN ? AND ?";
+                $where[] = "CAST(rd.nro_comprobante AS UNSIGNED) BETWEEN ? AND ?";
                 $params[] = $min;
                 $params[] = $max;
             } else {
