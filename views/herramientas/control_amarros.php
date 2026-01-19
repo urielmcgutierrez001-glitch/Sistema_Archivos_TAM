@@ -7,7 +7,7 @@ $pageTitle = 'Herramientas - Control de Amarros';
     <div class="card-header">
         <h2>Control y Revisión de Amarros</h2>
         <div class="header-actions">
-            <a href="https://app-dddd8fce-b79e-4d27-a1c4-0e2ef9614b81.cleverapps.io/" target="_blank" class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;">
+            <a href="https://control-amarros-tam.onrender.com" target="_blank" class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;">
                 🚀 Abrir Herramienta Externa
             </a>
         </div>
