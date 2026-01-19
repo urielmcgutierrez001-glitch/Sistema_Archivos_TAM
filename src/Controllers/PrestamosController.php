@@ -239,39 +239,46 @@ class PrestamosController extends BaseController
                     LIMIT 100";
             
             $documentos = $this->hojaRuta->getDb()->fetchAll($sql, $params);
+
         } else {
-                    // Buscar en documentos (otros tipos)
-            // Permitimos ver todos los estados relevantes, aunque algunos no se puedan prestar
-            $where = ["rd.estado_documento IN ('DISPONIBLE', 'NO UTILIZADO', 'ANULADO', 'FALTA', 'PRESTADO')"];
-            $params = [];
+            // Buscar en documentos (otros tipos)
             
-            if (!empty($search)) {
-                $where[] = "(rd.nro_comprobante = ? OR rd.codigo_abc = ?)";
-                $params[] = $search; // Exact
-                $params[] = $search; // Exact
+            // OPTIMIZACIÓN: Si no hay filtros, no buscar NADA para evitar sobrecarga (Error /tmp full)
+            if (empty($search) && empty($gestion) && empty($tipo_documento)) {
+                $documentos = [];
+            } else {
+                // Permitimos ver todos los estados relevantes, aunque algunos no se puedan prestar
+                $where = ["rd.estado_documento IN ('DISPONIBLE', 'NO UTILIZADO', 'ANULADO', 'FALTA', 'PRESTADO')"];
+                $params = [];
+                
+                if (!empty($search)) {
+                    $where[] = "(rd.nro_comprobante = ? OR rd.codigo_abc = ?)";
+                    $params[] = $search; // Exact
+                    $params[] = $search; // Exact
+                }
+                
+                if (!empty($gestion)) {
+                    $where[] = "rd.gestion = ?";
+                    $params[] = $gestion;
+                }
+                
+                if (!empty($tipo_documento)) {
+                    $where[] = "rd.tipo_documento = ?";
+                    $params[] = $tipo_documento;
+                }
+                
+                $whereClause = 'WHERE ' . implode(' AND ', $where);
+                
+                $sql = "SELECT rd.*, cf.tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica
+                        FROM documentos rd
+                        LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                        LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
+                        {$whereClause}
+                        ORDER BY rd.gestion DESC, rd.nro_comprobante DESC
+                        LIMIT 50";
+                
+                $documentos = $this->documento->getDb()->fetchAll($sql, $params);
             }
-            
-            if (!empty($gestion)) {
-                $where[] = "rd.gestion = ?";
-                $params[] = $gestion;
-            }
-            
-            if (!empty($tipo_documento)) {
-                $where[] = "rd.tipo_documento = ?";
-                $params[] = $tipo_documento;
-            }
-            
-            $whereClause = 'WHERE ' . implode(' AND ', $where);
-            
-            $sql = "SELECT rd.*, cf.tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica
-                    FROM documentos rd
-                    LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
-                    LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
-                    {$whereClause}
-                    ORDER BY rd.gestion DESC, rd.nro_comprobante DESC
-                    LIMIT 100";
-            
-            $documentos = $this->documento->getDb()->fetchAll($sql, $params);
         }
         
         // Obtener unidades
