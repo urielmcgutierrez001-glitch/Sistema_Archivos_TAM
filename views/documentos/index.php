@@ -91,7 +91,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">🔍 Buscar</button>
-            <a href="/catalogacion<?= $modoLotes ? '?modo_lotes=1' : '' ?>" class="btn btn-secondary">🔄 Limpiar Filtros</a>
+            <a href="/catalogacion?clean=1<?= $modoLotes ? '&modo_lotes=1' : '' ?>" class="btn btn-secondary">🔄 Limpiar Filtros</a>
         </div>
     </form>
 </div>

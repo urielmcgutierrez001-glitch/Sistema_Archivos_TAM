@@ -40,8 +40,46 @@ class CatalogacionController extends BaseController
     public function index()
     {
         $this->requireAuth();
+
+        // 1. Limpiar filtros si se solicita explícitamente y limpiar sesión
+        if (isset($_GET['clean'])) {
+            unset($_SESSION['catalogacion_filters']);
+            $modoLotes = isset($_GET['modo_lotes']) ? '?modo_lotes=1' : '';
+            $this->redirect('/catalogacion' . $modoLotes);
+            return;
+        }
         
-        // Obtener parámetros de búsqueda
+        // 2. Detectar si hay nuevos filtros en $_GET (Búsqueda activa)
+        // Verificamos si hay algún parámetro de búsqueda presente
+        $hasFilters = isset($_GET['search']) || isset($_GET['gestion']) || isset($_GET['ubicacion_id']) || 
+                      isset($_GET['estado_documento']) || isset($_GET['tipo_documento']);
+        
+        if ($hasFilters) {
+            // Guardar filtros en sesión
+            $_SESSION['catalogacion_filters'] = [
+                'search' => $_GET['search'] ?? '',
+                'gestion' => $_GET['gestion'] ?? '',
+                'ubicacion_id' => $_GET['ubicacion_id'] ?? '',
+                'estado_documento' => $_GET['estado_documento'] ?? '',
+                'tipo_documento' => $_GET['tipo_documento'] ?? ''
+            ];
+        } 
+        // 3. Si NO hay filtros en $_GET (acceso directo), pero existen en sesión -> Restaurar
+        elseif (isset($_SESSION['catalogacion_filters']) && empty($_GET['page'])) {
+            // Restaurar y redirigir
+            $saved = $_SESSION['catalogacion_filters'];
+            
+            // Si mantenemos modo lotes
+            if (isset($_GET['modo_lotes'])) {
+                $saved['modo_lotes'] = $_GET['modo_lotes'];
+            }
+
+            $params = http_build_query($saved);
+            $this->redirect('/catalogacion?' . $params);
+            return;
+        }
+        
+        // Obtener parámetros de búsqueda (ya sea de GET o vacíos si se limpió)
         $search = $_GET['search'] ?? '';
         $gestion = $_GET['gestion'] ?? '';
         $ubicacion_id = $_GET['ubicacion_id'] ?? '';
