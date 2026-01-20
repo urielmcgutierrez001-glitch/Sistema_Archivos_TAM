@@ -183,9 +183,48 @@ class Documento extends BaseModel
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
                 LEFT JOIN ubicaciones u ON cf.ubicacion_id = u.id
                 LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
-                {$whereClause}
-                ORDER BY rd.id DESC
-                LIMIT {$perPage} OFFSET {$offset}";
+                {$whereClause}";
+                
+        // Sorting Logic
+        $sort = $filters['sort'] ?? '';
+        $order = strtoupper($filters['order'] ?? '') === 'ASC' ? 'ASC' : 'DESC';
+        
+        $orderBy = '';
+        switch ($sort) {
+            case 'gestion':
+                $orderBy = "rd.gestion $order";
+                break;
+            case 'tipo':
+                $orderBy = "t.codigo $order";
+                break;
+            case 'nro_comprobante':
+                // Natural sort attempt: length then value, or CAST
+                if ($order === 'ASC') {
+                   $orderBy = "CAST(rd.nro_comprobante AS UNSIGNED) ASC, rd.nro_comprobante ASC";
+                } else {
+                   $orderBy = "CAST(rd.nro_comprobante AS UNSIGNED) DESC, rd.nro_comprobante DESC";
+                }
+                break;
+            case 'codigo_abc':
+                $orderBy = "rd.codigo_abc $order";
+                break;
+            case 'contenedor':
+                $orderBy = "cf.tipo_contenedor $order, cf.numero $order";
+                break;
+            case 'ubicacion':
+                $orderBy = "u.nombre $order";
+                break;
+            case 'estado':
+                $orderBy = "rd.estado_documento $order";
+                break;
+            default:
+                // Default sort
+                $orderBy = "rd.gestion DESC, rd.nro_comprobante ASC";
+                break;
+        }
+        
+        $sql .= " ORDER BY $orderBy
+                  LIMIT {$perPage} OFFSET {$offset}";
         
         return $this->db->fetchAll($sql, $params);
     }

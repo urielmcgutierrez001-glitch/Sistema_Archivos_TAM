@@ -45,7 +45,7 @@ $router->get('/catalogacion/ver/{id}', 'CatalogacionController@ver', ['AuthMiddl
 $router->get('/catalogacion/editar/{id}', 'CatalogacionController@editar', ['AuthMiddleware']);
 $router->post('/catalogacion/actualizar/{id}', 'CatalogacionController@actualizar', ['AuthMiddleware']);
 $router->get('/catalogacion/eliminar/{id}', 'CatalogacionController@eliminar', ['AuthMiddleware']);
-$router->post('/catalogacion/lote/actualizar-contenedor', 'CatalogacionController@actualizarLoteContenedor', ['AuthMiddleware']);
+$router->post('/catalogacion/lote/actualizar', 'CatalogacionController@actualizarLote', ['AuthMiddleware']);
 
 // Préstamos
 $router->get('/prestamos', 'PrestamosController@index', ['AuthMiddleware']);
@@ -71,9 +71,11 @@ $router->get('/reportes', 'ReportesController@index', ['AuthMiddleware']);
 $router->get('/contenedores', 'ContenedoresController@index', ['AuthMiddleware']);
 $router->get('/contenedores/crear', 'ContenedoresController@crear', ['AuthMiddleware']);
 $router->post('/contenedores/guardar', 'ContenedoresController@guardar', ['AuthMiddleware']);
+$router->get('/contenedores/ver/{id}', 'ContenedoresController@ver', ['AuthMiddleware']);
 $router->get('/contenedores/editar/{id}', 'ContenedoresController@editar', ['AuthMiddleware']);
 $router->post('/contenedores/actualizar/{id}', 'ContenedoresController@actualizar', ['AuthMiddleware']);
 $router->get('/contenedores/eliminar/{id}', 'ContenedoresController@eliminar', ['AuthMiddleware']);
+$router->post('/contenedores/actualizar-ubicacion-masiva', 'ContenedoresController@actualizarUbicacionMasiva', ['AuthMiddleware']);
 
 // Usuarios (solo administrador)
 $router->get('/admin/usuarios', 'UsuariosController@index', ['AuthMiddleware']);

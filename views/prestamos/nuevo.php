@@ -50,6 +50,56 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
         </div>
     </form>
     
+    <!-- CSS Standarizado -->
+    <style>
+    .form-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; align-items: center; }
+    .pagination { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        gap: 8px; 
+        padding: 25px 0; 
+        flex-wrap: wrap; 
+    }
+    .pagination-numbers { 
+        display: flex; 
+        gap: 2px; 
+        background: #fff;
+        padding: 3px;
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+    }
+    .btn-light { background: white; border: none; color: #007bff; font-weight: 500; }
+    .btn-light:hover { background-color: #e9ecef; color: #0056b3; text-decoration: none; }
+    .btn-primary.active { background: #1B3C84; border-color: #1B3C84; color: white; cursor: default; z-index: 1; }
+    .page-num { border-radius: 2px; padding: 6px 12px; }
+    </style>
+
+    <!-- Header Resultados con Input Cantidad -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #eee; background: #f8f9fa;">
+        <h3 style="margin: 0; font-size: 1.1em;">Resultados de Búsqueda</h3>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 0.9em; color: #666;">Cantidad de Filas:</span>
+            <input type="number" id="perPageInput" value="<?= $paginacion['per_page'] ?? 20 ?>" min="1" max="200" 
+                   style="width: 70px; padding: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9em;"
+                   onchange="updatePerPage(this.value)" onkeypress="if(event.key === 'Enter') updatePerPage(this.value)">
+            <span class="badge badge-info"><?= number_format($paginacion['total'] ?? 0) ?> documentos</span>
+        </div>
+    </div>
+
+    <!-- Script para actualizar per_page -->
+    <script>
+    function updatePerPage(val) {
+        val = parseInt(val);
+        if (val < 1) val = 1;
+        if (val > 200) val = 200;
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('per_page', val);
+        urlParams.set('page', 1);
+        window.location.search = urlParams.toString();
+    }
+    </script>
+    
     <!-- Tabla de documentos disponibles -->
     <div class="table-responsive">
         <table class="table">
@@ -58,18 +108,35 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
                     <th style="width: 50px;">
                         <input type="checkbox" id="checkAll" onclick="toggleTodos(this)" title="Seleccionar todos">
                     </th>
-                    <th>Tipo Documento</th>
-                    <th>Gestión</th>
-                    <th>Nro Comprobante</th>
+                    <?php
+                    // Helper ordenamiento
+                    $currentSort = $_GET['sort'] ?? '';
+                    $currentOrder = $_GET['order'] ?? '';
+                    
+                    $makeSortLink = function($col, $label) use ($filtros, $currentSort, $currentOrder) {
+                        $newOrder = ($currentSort === $col && $currentOrder === 'ASC') ? 'DESC' : 'ASC';
+                        $icon = '';
+                        if ($currentSort === $col) {
+                            $icon = $currentOrder === 'ASC' ? ' ▲' : ' ▼';
+                        } else {
+                            $icon = ' <span style="opacity:0.3; font-size: 0.8em">⇅</span>';
+                        }
+                        $params = array_merge($filtros, ['sort' => $col, 'order' => $newOrder, 'page' => 1]); 
+                        return '<a href="?' . http_build_query($params) . '" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: space-between;">' . $label . $icon . '</a>';
+                    };
+                    ?>
+                    <th><?= $makeSortLink('tipo_documento', 'Tipo Documento') ?></th>
+                    <th><?= $makeSortLink('gestion', 'Gestión') ?></th>
+                    <th><?= $makeSortLink('nro_comprobante', 'Nro Comprobante') ?></th>
                     <th>Contenedor</th>
-                    <th>Ubicación</th>
-                    <th>Estado</th>
+                    <th><?= $makeSortLink('ubicacion', 'Ubicación') ?></th>
+                    <th><?= $makeSortLink('estado', 'Estado') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($documentos)): ?>
                     <tr>
-                        <td colspan="6" class="text-center">No hay documentos disponibles</td>
+                        <td colspan="7" class="text-center">No hay documentos disponibles</td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($documentos as $doc): ?>
@@ -146,18 +213,79 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
             </tbody>
         </table>
     </div>
+
+    <!-- Paginación Google Style -->
+    <?php if (($paginacion['total_pages'] ?? 0) > 1): ?>
+        <div class="pagination">
+            <?php 
+                $current = $paginacion['page'];
+                $total_p = $paginacion['total_pages'];
+                $max_visible = 10;
+                
+                $start = max(1, $current - floor($max_visible / 2));
+                $end = min($total_p, $start + $max_visible - 1);
+                
+                if ($end - $start + 1 < $max_visible) {
+                    $start = max(1, $end - $max_visible + 1);
+                }
+                
+                $params = $filtros;
+            ?>
+
+            <!-- Primera -->
+            <?php if ($current > 1): ?>
+                <a href="?<?= http_build_query(array_merge($params, ['page' => 1])) ?>" class="btn btn-secondary">⇤ Primero</a>
+            <?php endif; ?>
+
+            <!-- Anterior -->
+            <?php if ($current > 1): ?>
+                <a href="?<?= http_build_query(array_merge($params, ['page' => $current - 1])) ?>" class="btn btn-warning">← Anterior</a>
+            <?php else: ?>
+                <button class="btn btn-secondary" disabled>← Anterior</button>
+            <?php endif; ?>
+            
+            <!-- Números -->
+            <div class="pagination-numbers">
+                <?php for ($i = $start; $i <= $end; $i++): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => $i])) ?>" 
+                       class="btn <?= $i == $current ? 'btn-primary active' : 'btn-light' ?> page-num">
+                        <?= $i ?>
+                    </a>
+                <?php endfor; ?>
+            </div>
+            
+            <!-- Siguiente -->
+            <?php if ($current < $total_p): ?>
+                <a href="?<?= http_build_query(array_merge($params, ['page' => $current + 1])) ?>" class="btn btn-warning">Siguiente →</a>
+            <?php else: ?>
+                <button class="btn btn-secondary" disabled>Siguiente →</button>
+            <?php endif; ?>
+
+            <!-- Última -->
+            <?php if ($current < $total_p): ?>
+                <a href="?<?= http_build_query(array_merge($params, ['page' => $total_p])) ?>" class="btn btn-secondary">Último ⇥</a>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
     
-    <!-- Lista de documentos seleccionados -->
     <div id="documentos-seleccionados" style="display: none; padding: 20px; background: #f0f9ff; border-top: 2px solid #3182CE;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h3 style="color: #1B3C84; margin: 0;">📋 Documentos Seleccionados (<span id="selected-count">0</span>)</h3>
-            <button type="button" class="btn btn-primary" onclick="procesarPrestamo()" id="btn-procesar">
-                📤 Procesar Préstamo (<span id="count">0</span> docs)
-            </button>
+            
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label style="display: flex; align-items: center; cursor: pointer; background: #EDF2F7; padding: 5px 10px; border-radius: 5px; border: 1px solid #CBD5E0;">
+                    <input type="checkbox" id="check-historico" onchange="toggleHistorico()" style="margin-right: 8px;">
+                    <span style="font-size: 0.9em; font-weight: 500;">📅 Registrar como Histórico / Pasado</span>
+                </label>
+                
+                <button type="button" class="btn btn-primary" onclick="procesarPrestamo()" id="btn-procesar">
+                    📤 Procesar Préstamo (<span id="count">0</span> docs)
+                </button>
+            </div>
         </div>
         <div id="lista-documentos" style="display: grid; gap: 10px; margin-bottom: 15px;"></div>
         
-        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #cbd5e0;">
+        <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #cbd5e0;">
             <div class="form-group">
                 <label for="unidad_area_solicitante">Unidad/Área Solicitante <span class="required">*</span></label>
                 <select id="unidad_area_solicitante" class="form-control">
@@ -174,11 +302,25 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
             </div>
             
             <div class="form-group">
-                <label for="fecha_devolucion">Fecha de Devolución <span class="required">*</span></label>
-                <input type="date" id="fecha_devolucion" class="form-control" min="<?= date('Y-m-d') ?>">
+                <label for="fecha_prestamo">Fecha de Préstamo <span class="required" id="req-prestamo">*</span></label>
+                <input type="date" id="fecha_prestamo" class="form-control" value="<?= date('Y-m-d') ?>">
             </div>
             
             <div class="form-group">
+                <label for="fecha_devolucion">Fecha de Devolución <span class="required" id="req-devolucion">*</span></label>
+                <input type="date" id="fecha_devolucion" class="form-control">
+                <small class="text-muted" id="help-devolucion" style="display:none;">Opcional para históricos</small>
+            </div>
+
+            <div class="form-group" id="group-estado" style="display: none;">
+                <label for="estado_inicial">Estado del Préstamo</label>
+                <select id="estado_inicial" class="form-control" style="background-color: #f7fafc;">
+                    <option value="Prestado">En Poder del Prestatario (Prestado)</option>
+                    <option value="Devuelto">Ya fue Devuelto (Cerrado)</option>
+                </select>
+            </div>
+            
+            <div class="form-group" style="grid-column: 1 / -1;">
                 <label for="observaciones_prestamo">Observaciones</label>
                 <input type="text" id="observaciones_prestamo" class="form-control" placeholder="Motivo del préstamo...">
             </div>
@@ -245,12 +387,79 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Set default date (7 days from now)
-    const fecha = document.getElementById('fecha_devolucion');
-    const hoy = new Date();
-    hoy.setDate(hoy.getDate() + 7);
-    fecha.value = hoy.toISOString().split('T')[0];
+    // Set default date (14 days from now)
+    updateDefaultReturnDate();
+    
+    // Init state
+    toggleHistorico();
 });
+
+function updateDefaultReturnDate() {
+    const fechaDev = document.getElementById('fecha_devolucion');
+    const fechaPrestamo = document.getElementById('fecha_prestamo');
+    
+    if (fechaPrestamo.value) {
+        const baseDate = new Date(fechaPrestamo.value);
+        baseDate.setDate(baseDate.getDate() + 14); // 2 Weeks default
+        
+        // Format YYYY-MM-DD
+        const year = baseDate.getFullYear();
+        const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+        const day = String(baseDate.getDate()).padStart(2, '0');
+        
+        // Use user supplied value if exists, otherwise set default
+        // Actually, logic is: if user changes prestamo date, should we auto-update return date?
+        // Maybe only if return date is empty or was default?
+        // For simplicity, let's just set it on load. User can change it.
+        // But if user changes 'Fecha Prestamo', we might want to suggest new return date.
+        // Let's attach listener to fecha_prestamo
+    }
+}
+
+// Update return date suggestion when loan date changes
+document.getElementById('fecha_prestamo').addEventListener('change', function() {
+    const isHistorico = document.getElementById('check-historico').checked;
+    if (!isHistorico) {
+        const prestamoVal = this.value;
+        if (prestamoVal) {
+             const baseDate = new Date(prestamoVal + 'T12:00:00'); // T12 to avoid timezone issues
+             baseDate.setDate(baseDate.getDate() + 14);
+             const isoDate = baseDate.toISOString().split('T')[0];
+             document.getElementById('fecha_devolucion').value = isoDate;
+        }
+    }
+});
+
+
+function toggleHistorico() {
+    const isHistorico = document.getElementById('check-historico').checked;
+    const groupEstado = document.getElementById('group-estado');
+    const reqDevolucion = document.getElementById('req-devolucion');
+    const helpDevolucion = document.getElementById('help-devolucion');
+    const fechaDev = document.getElementById('fecha_devolucion');
+    
+    if (isHistorico) {
+        groupEstado.style.display = 'block';
+        reqDevolucion.style.display = 'none';
+        helpDevolucion.style.display = 'block';
+        fechaDev.removeAttribute('required');
+        // Remove min date restriction for historical
+        fechaDev.removeAttribute('min'); 
+    } else {
+        groupEstado.style.display = 'none';
+        reqDevolucion.style.display = 'inline';
+        helpDevolucion.style.display = 'none';
+        fechaDev.setAttribute('required', 'true');
+        fechaDev.setAttribute('min', new Date().toISOString().split('T')[0]);
+        
+        // Reset state to Prestado just in case
+        document.getElementById('estado_inicial').value = 'Prestado';
+        
+        // Reset dates logic
+        const prestamoInput = document.getElementById('fecha_prestamo');
+        // If date is in past, maybe warn? No, just let it be.
+    }
+}
 
 function toggleTodos(checkbox) {
     const checkboxes = document.querySelectorAll('.doc-checkbox');
@@ -354,11 +563,24 @@ function procesarPrestamo() {
     
     const unidad = document.getElementById('unidad_area_solicitante').value;
     const prestatario = document.getElementById('nombre_prestatario').value;
-    const fecha = document.getElementById('fecha_devolucion').value;
+    const fechaPrestamo = document.getElementById('fecha_prestamo').value;
+    const fechaDevolucion = document.getElementById('fecha_devolucion').value;
+    const isHistorico = document.getElementById('check-historico').checked;
+    const estado = document.getElementById('estado_inicial').value;
     
-    if (!unidad || !fecha) {
-        alert('⚠️ Debes completar Unidad/Área indicando el solicitante y la Fecha de Devolución');
+    if (!unidad) {
+        alert('⚠️ Debes completar Unidad/Área indicando el solicitante');
         return;
+    }
+
+    if (!fechaPrestamo) {
+        alert('⚠️ La Fecha de Préstamo es obligatoria');
+        return;
+    }
+    
+    if (!isHistorico && !fechaDevolucion) {
+         alert('⚠️ La Fecha de Devolución es obligatoria en préstamos actuales');
+         return;
     }
     
     // Confirmar
@@ -375,9 +597,12 @@ function procesarPrestamo() {
     form.innerHTML = `
         <input type="hidden" name="unidad_area_id" value="${unidad}">
         <input type="hidden" name="nombre_prestatario" value="${prestatario}">
-        <input type="hidden" name="fecha_devolucion" value="${fecha}">
+        <input type="hidden" name="fecha_prestamo" value="${fechaPrestamo}">
+        <input type="hidden" name="fecha_devolucion" value="${fechaDevolucion}">
         <input type="hidden" name="observaciones" value="${document.getElementById('observaciones_prestamo').value}">
         <input type="hidden" name="documentos" value='${JSON.stringify(documentosSeleccionados.map(d => d.id))}'>
+        <input type="hidden" name="estado_inicial" value="${isHistorico ? estado : 'En Proceso'}">
+        <input type="hidden" name="es_historico" value="${isHistorico ? '1' : '0'}">
     `;
     
     document.body.appendChild(form);

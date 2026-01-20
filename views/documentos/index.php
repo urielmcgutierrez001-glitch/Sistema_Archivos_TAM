@@ -11,7 +11,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
             <a href="/catalogacion/crear" class="btn btn-primary">➕ Nuevo Documento</a>
             <?php if ($modoLotes): ?>
                 <a href="/catalogacion" class="btn btn-secondary">← Modo Normal</a>
-                <button type="button" class="btn btn-warning" onclick="abrirModalAsignacion()">📦 Asignar Contenedor</button>
+                <button type="button" class="btn btn-warning" onclick="abrirModalEdicionLote()">✏️ Editar Lote</button>
                 <button type="button" class="btn btn-success" onclick="procesarLote()">📋 Generar Reporte Lote</button>
             <?php else: ?>
                 <a href="/catalogacion?modo_lotes=1" class="btn btn-warning">📦 Buscar por Lotes</a>
@@ -91,7 +91,7 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
         
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">🔍 Buscar</button>
-            <a href="/catalogacion?clean=1<?= $modoLotes ? '&modo_lotes=1' : '' ?>" class="btn btn-secondary">🔄 Limpiar Filtros</a>
+            <a href="/catalogacion?clean=1<?= $modoLotes ? '&modo_lotes=1' : '' ?>" class="btn btn-secondary">🧹 Limpiar Filtros</a>
         </div>
     </form>
 </div>
@@ -103,10 +103,30 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
 <?php endif; ?>
 
 <div class="card mt-20">
-    <div class="card-header">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h3>Resultados de Búsqueda</h3>
-        <span class="badge"><?= number_format($paginacion['total']) ?> documentos</span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span>Cantidad de Filas:</span>
+            <input type="number" id="perPageInput" value="<?= $paginacion['per_page'] ?? 20 ?>" min="1" max="200" 
+                   style="width: 70px; padding: 5px; border-radius: 4px; border: 1px solid #ccc;"
+                   onchange="updatePerPage(this.value)" onkeypress="if(event.key === 'Enter') updatePerPage(this.value)">
+            <span class="badge"><?= number_format($paginacion['total']) ?> documentos</span>
+        </div>
     </div>
+    
+    <script>
+    function updatePerPage(val) {
+        val = parseInt(val);
+        if (val < 1) val = 1;
+        if (val > 200) val = 200;
+        
+        // Construct new URL properly maintaining existing params
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('per_page', val);
+        urlParams.set('page', 1); // Reset to page 1
+        window.location.search = urlParams.toString();
+    }
+    </script>
     
     <?php if (empty($documentos)): ?>
         <div class="alert alert-info">
@@ -122,13 +142,35 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
                                 <input type="checkbox" id="seleccionar-todos" onclick="toggleTodos(this)">
                             </th>
                         <?php endif; ?>
-                        <th>Gestión</th>
-                        <th>Tipo</th>
-                        <th>Nro Comprobante</th>
-                        <th>Código ABC</th>
-                        <th>Contenedor</th>
-                        <th>Ubicación</th>
-                        <th>Estado</th>
+                        
+                        <?php
+                        // Helper para generar links de ordenamiento
+                        $currentSort = $_GET['sort'] ?? '';
+                        $currentOrder = $_GET['order'] ?? '';
+                        
+                        $makeSortLink = function($col, $label) use ($filtros, $currentSort, $currentOrder) {
+                            $newOrder = ($currentSort === $col && $currentOrder === 'ASC') ? 'DESC' : 'ASC';
+                            $icon = '';
+                            if ($currentSort === $col) {
+                                $icon = $currentOrder === 'ASC' ? ' ▲' : ' ▼';
+                            } else {
+                                $icon = ' <span style="opacity:0.3; font-size: 0.8em">⇅</span>'; // Indicador sutil
+                            }
+                            
+                            $params = array_merge($filtros, ['sort' => $col, 'order' => $newOrder, 'page' => 1]); 
+                            // Reset page to 1 when sorting
+                            
+                            return '<a href="?' . http_build_query($params) . '" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: space-between;">' . $label . $icon . '</a>';
+                        };
+                        ?>
+                        
+                        <th><?= $makeSortLink('gestion', 'Gestión') ?></th>
+                        <th><?= $makeSortLink('tipo', 'Tipo') ?></th>
+                        <th><?= $makeSortLink('nro_comprobante', 'Nro Comprobante') ?></th>
+                        <th><?= $makeSortLink('codigo_abc', 'Código ABC') ?></th>
+                        <th><?= $makeSortLink('contenedor', 'Contenedor') ?></th>
+                        <th><?= $makeSortLink('ubicacion', 'Ubicación') ?></th>
+                        <th><?= $makeSortLink('estado', 'Estado') ?></th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -503,7 +545,7 @@ function procesarLote() {
         </html>
     `);
 }
-function abrirModalAsignacion() {
+function abrirModalEdicionLote() {
     const seleccionados = [];
     document.querySelectorAll('.doc-checkbox:checked').forEach(checkbox => {
         seleccionados.push(checkbox.value);
@@ -527,23 +569,26 @@ function cerrarModalAsignacion() {
 </script>
 
 <?php if ($modoLotes): ?>
-<!-- Modal Asignación de Contenedor -->
+<!-- Modal Edición Lote -->
 <div id="modalAsignacion" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5);">
     <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 50%; max-width: 500px; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; color: #1B3C84;">Asignar Contenedor a Lote</h3>
+            <h3 style="margin: 0; color: #1B3C84;">Editar Lote de Documentos</h3>
             <span onclick="cerrarModalAsignacion()" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
         </div>
         
-        <form action="/catalogacion/lote/actualizar-contenedor" method="POST">
+        <form action="/catalogacion/lote/actualizar" method="POST">
             <input type="hidden" name="ids" id="ids_lote">
             
-            <p>Se asignará el contenedor seleccionado a <strong><span id="count_seleccionados">0</span></strong> documentos.</p>
+            <p style="margin-bottom: 15px;">Editando <strong><span id="count_seleccionados">0</span></strong> documentos seleccionados.</p>
+            <div class="alert alert-info" style="font-size: 0.9em; padding: 10px; margin-bottom: 15px;">
+                Nota: Solo se actualizarán los campos que seleccione. Deje en "-- Seleccione --" para mantener el valor actual.
+            </div>
             
             <div class="form-group" style="margin-bottom: 20px;">
-                <label for="contenedor_lote">Seleccione Contenedor:</label>
-                <select name="contenedor_id" id="contenedor_lote" class="form-control" required style="width: 100%; padding: 8px;">
-                    <option value="">-- Seleccione --</option>
+                <label for="contenedor_lote">Contenedor:</label>
+                <select name="contenedor_id" id="contenedor_lote" class="form-control" style="width: 100%; padding: 8px;">
+                    <option value="">-- No cambiar --</option>
                     <?php if (isset($contenedores)): ?>
                         <?php foreach ($contenedores as $c): ?>
                             <option value="<?= $c['id'] ?>">
@@ -551,6 +596,18 @@ function cerrarModalAsignacion() {
                             </option>
                         <?php endforeach; ?>
                     <?php endif; ?>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="estado_lote">Estado:</label>
+                <select name="estado_documento" id="estado_lote" class="form-control" style="width: 100%; padding: 8px;">
+                    <option value="">-- No cambiar --</option>
+                    <option value="DISPONIBLE">🟢 Disponible</option>
+                    <option value="FALTA">🔴 Falta</option>
+                    <option value="PRESTADO">🔵 Prestado</option>
+                    <option value="NO UTILIZADO">🟡 No Utilizado</option>
+                    <option value="ANULADO">🟣 Anulado</option>
                 </select>
             </div>
             

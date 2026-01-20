@@ -13,24 +13,20 @@ $pageTitle = 'Gestión de Contenedores';
         </div>
     </div>
     
-    <div class="card-body" style="background: #f8f9fa; padding: 20px; border-bottom: 1px solid #e3e6f0;">
-        <form action="/contenedores" method="GET">
-            <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; align-items: end;">
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 12px; font-weight: bold; color: #5a5c69; margin-bottom: 5px;">Tipo Documento</label>
-                    <input type="text" name="tipo_documento" class="form-control form-control-sm" placeholder="Ej: REGISTRO..." value="<?= htmlspecialchars($filtros['tipo_documento'] ?? '') ?>">
+    <div class="card-body">
+        <form action="/contenedores" method="GET" class="search-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="numero">Número</label>
+                    <input type="text" name="numero" id="numero" class="form-control" placeholder="Ej: 1 o 1-10" value="<?= htmlspecialchars($filtros['numero'] ?? '') ?>">
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 12px; font-weight: bold; color: #5a5c69; margin-bottom: 5px;">Número</label>
-                    <input type="number" name="numero" class="form-control form-control-sm" placeholder="Ej: 1" value="<?= htmlspecialchars($filtros['numero'] ?? '') ?>">
+                <div class="form-group">
+                    <label for="gestion">Gestión</label>
+                    <input type="number" name="gestion" id="gestion" class="form-control" placeholder="Año" value="<?= htmlspecialchars($filtros['gestion'] ?? '') ?>">
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 12px; font-weight: bold; color: #5a5c69; margin-bottom: 5px;">Gestión</label>
-                    <input type="number" name="gestion" class="form-control form-control-sm" placeholder="Año" value="<?= htmlspecialchars($filtros['gestion'] ?? '') ?>">
-                </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 12px; font-weight: bold; color: #5a5c69; margin-bottom: 5px;">Ubicación</label>
-                    <select name="ubicacion_id" class="form-control form-control-sm">
+                <div class="form-group">
+                    <label for="ubicacion_id">Ubicación</label>
+                    <select name="ubicacion_id" id="ubicacion_id" class="form-control">
                         <option value="">-- Todas --</option>
                         <?php foreach ($ubicaciones as $u): ?>
                             <option value="<?= $u['id'] ?>" <?= ($filtros['ubicacion_id'] ?? '') == $u['id'] ? 'selected' : '' ?>>
@@ -39,78 +35,313 @@ $pageTitle = 'Gestión de Contenedores';
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 12px; font-weight: bold; color: #5a5c69; margin-bottom: 5px;">Tipo Cont.</label>
-                    <select name="tipo_contenedor" class="form-control form-control-sm">
+                <div class="form-group">
+                    <label for="tipo_contenedor">Tipo Cont.</label>
+                    <select name="tipo_contenedor" id="tipo_contenedor" class="form-control">
                         <option value="">-- Todos --</option>
                         <option value="AMARRO" <?= ($filtros['tipo_contenedor'] ?? '') == 'AMARRO' ? 'selected' : '' ?>>📦 Amarro</option>
                         <option value="LIBRO" <?= ($filtros['tipo_contenedor'] ?? '') == 'LIBRO' ? 'selected' : '' ?>>📚 Libro</option>
                     </select>
                 </div>
-                <div style="display: flex; gap: 5px;">
-                    <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">🔍 Buscar</button>
-                    <a href="/contenedores" class="btn btn-secondary btn-sm" style="flex: 1;">Limpiar</a>
+                <div class="form-group">
+                    <label for="tipo_documento">Tipo Documento</label>
+                    <select name="tipo_documento" id="tipo_documento" class="form-control">
+                        <option value="">-- Todos --</option>
+                        <option value="REGISTRO_DIARIO" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_DIARIO' ? 'selected' : '' ?>>📋 Registro Diario</option>
+                        <option value="REGISTRO_INGRESO" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_INGRESO' ? 'selected' : '' ?>>💵 Registro Ingreso</option>
+                        <option value="REGISTRO_CEPS" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_CEPS' ? 'selected' : '' ?>>🏦 Registro CEPS</option>
+                        <option value="PREVENTIVOS" <?= ($filtros['tipo_documento'] ?? '') === 'PREVENTIVOS' ? 'selected' : '' ?>>📊 Preventivos</option>
+                        <option value="ASIENTOS_MANUALES" <?= ($filtros['tipo_documento'] ?? '') === 'ASIENTOS_MANUALES' ? 'selected' : '' ?>>✍️ Asientos Manuales</option>
+                        <option value="DIARIOS_APERTURA" <?= ($filtros['tipo_documento'] ?? '') === 'DIARIOS_APERTURA' ? 'selected' : '' ?>>📂 Diarios de Apertura</option>
+                        <option value="REGISTRO_TRASPASO" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_TRASPASO' ? 'selected' : '' ?>>🔄 Registro Traspaso</option>
+                        <option value="HOJA_RUTA_DIARIOS" <?= ($filtros['tipo_documento'] ?? '') === 'HOJA_RUTA_DIARIOS' ? 'selected' : '' ?>>🗺️ Hoja de Ruta - Diarios</option>
+                    </select>
                 </div>
             </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">🔍 Buscar</button>
+                <a href="/contenedores?clean=1" class="btn btn-secondary">🧹 Limpiar Filtros</a>
+            </div>
+            
+            <!-- Per Page Control moved to Results Header -->
         </form>
     </div>
     
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
-                    <th>Tipo Documento</th>
-                    <th>Tipo</th>
-                    <th>Número</th>
-                    <th>Gestión</th>
-                    <th>Ubicación</th>
-                    <th>Bloque/Nivel</th>
-                    <th>Color</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($contenedores)): ?>
-                    <tr><td colspan="8" class="text-center">No hay contenedores registrados</td></tr>
-                <?php else: ?>
-                    <?php foreach ($contenedores as $c): ?>
-                        <tr>
-                             <td><input type="checkbox" class="select-item" value="<?= $c['id'] ?>"></td>
-                             <td><?= htmlspecialchars($c['tipo_documento'] ?? '-') ?></td>
-                             <td>
-                                <?php if ($c['tipo_contenedor'] == 'LIBRO'): ?>
-                                    <span class="badge" style="background: #17a2b8;">📚 Libro</span>
-                                <?php else: ?>
-                                    <span class="badge" style="background: #6f42c1;">📦 Amarro</span>
-                                <?php endif; ?>
-                             </td>
-                             <td><strong>#<?= htmlspecialchars($c['numero'] ?? '') ?></strong></td>
-                             <td><?= htmlspecialchars($c['gestion'] ?? 'N/A') ?></td>
-                             <td><?= htmlspecialchars($c['ubicacion_nombre'] ?? 'Sin asignar') ?></td>
-                             <td><?= htmlspecialchars($c['bloque_nivel'] ?? '-') ?></td>
-                             <td>
-                                <?php if (!empty($c['color'])): ?>
-                                    <span class="badge" style="background-color: #eee; color: <?= htmlspecialchars($c['color']) ?>; border: 1px solid #ccc;">
-                                        <?= htmlspecialchars($c['color']) ?>
-                                    </span>
-                                <?php endif; ?>
-                             </td>
-                             <td>
-                                <a href="/contenedores/editar/<?= $c['id'] ?>" class="btn btn-sm btn-secondary">✏️ Editar</a>
-                                <a href="/contenedores/eliminar/<?= $c['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este contenedor? Asegúrate de que no tenga documentos asociados.')">🗑️</a>
-                             </td>
-                        </tr>
-                    <?php endforeach; ?>
+    <div class="card mt-20">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Resultados de Búsqueda</h3>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>Cantidad de Filas:</span>
+                <input type="number" id="perPageInput" value="<?= $paginacion['per_page'] ?? 20 ?>" min="1" max="200" 
+                       style="width: 70px; padding: 5px; border-radius: 4px; border: 1px solid #ccc;"
+                       onchange="updatePerPage(this.value)" onkeypress="if(event.key === 'Enter') updatePerPage(this.value)">
+                <span class="badge"><?= number_format($paginacion['total'] ?? 0) ?> contenedores</span>
+            </div>
+        </div>
+
+        <script>
+        function updatePerPage(val) {
+            val = parseInt(val);
+            if (val < 1) val = 1;
+            if (val > 200) val = 200;
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('per_page', val);
+            urlParams.set('page', 1);
+            window.location.search = urlParams.toString();
+        }
+        </script>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" id="selectAll"></th>
+                        <?php
+                        $currentSort = $_GET['sort'] ?? '';
+                        $currentOrder = $_GET['order'] ?? '';
+                        
+                        $makeSortLink = function($col, $label) use ($filtros, $currentSort, $currentOrder) {
+                            $newOrder = ($currentSort === $col && $currentOrder === 'ASC') ? 'DESC' : 'ASC';
+                            $icon = '';
+                            if ($currentSort === $col) {
+                                $icon = $currentOrder === 'ASC' ? ' ▲' : ' ▼';
+                            } else {
+                                $icon = ' <span style="opacity:0.3; font-size: 0.8em">⇅</span>';
+                            }
+                            $params = $filtros;
+                            $params['sort'] = $col;
+                            $params['order'] = $newOrder;
+                            $params['page'] = 1;
+                            return '<a href="?' . http_build_query($params) . '" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: space-between;">' . $label . $icon . '</a>';
+                        };
+                        ?>
+                        <th><?= $makeSortLink('tipo_documento', 'Tipo Documento') ?></th>
+                        <th><?= $makeSortLink('tipo_contenedor', 'Tipo') ?></th>
+                        <th><?= $makeSortLink('numero', 'Número') ?></th>
+                        <th><?= $makeSortLink('gestion', 'Gestión') ?></th>
+                        <th><?= $makeSortLink('ubicacion', 'Ubicación') ?></th>
+                        <th>Bloque/Nivel</th>
+                        <th>Color</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($contenedores)): ?>
+                        <tr><td colspan="9" class="text-center">No hay contenedores registrados</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($contenedores as $c): ?>
+                            <tr>
+                                 <td><input type="checkbox" class="select-item" value="<?= $c['id'] ?>"></td>
+                                 <td><?= htmlspecialchars($c['tipo_documento_nombre'] ?? $c['tipo_documento_codigo'] ?? $c['tipo_documento'] ?? '-') ?></td>
+                                 <td>
+                                    <?php if ($c['tipo_contenedor'] == 'LIBRO'): ?>
+                                        <span class="badge badge-libro">📚 Libro</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-amarro">📦 Amarro</span>
+                                    <?php endif; ?>
+                                 </td>
+                                 <td><strong>#<?= htmlspecialchars($c['numero'] ?? '') ?></strong></td>
+                                 <td><?= htmlspecialchars($c['gestion'] ?? 'N/A') ?></td>
+                                 <td><?= htmlspecialchars($c['ubicacion_nombre'] ?? 'Sin asignar') ?></td>
+                                 <td><?= htmlspecialchars($c['bloque_nivel'] ?? '-') ?></td>
+                                 <td>
+                                    <?php if (!empty($c['color'])): ?>
+                                        <span class="badge" style="background-color: #eee; color: <?= htmlspecialchars($c['color']) ?>; border: 1px solid #ccc;">
+                                            <?= htmlspecialchars($c['color']) ?>
+                                        </span>
+                                    <?php endif; ?>
+                                 </td>
+                                 <td>
+                                    <a href="/contenedores/ver/<?= $c['id'] ?>" class="btn btn-sm btn-primary" title="Ver Detalles">Ver</a>
+                                    <a href="/contenedores/editar/<?= $c['id'] ?>" class="btn btn-sm btn-secondary">✏️ Editar</a>
+                                    <a href="/contenedores/eliminar/<?= $c['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar este contenedor? Asegúrate de que no tenga documentos asociados.')">🗑️</a>
+                                 </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        <?php if (($paginacion['total_pages'] ?? 0) > 1): ?>
+            <div class="pagination">
+                <?php 
+                    $current = $paginacion['page'];
+                    $total_p = $paginacion['total_pages'];
+                    $max_visible = 10;
+                    
+                    $start = max(1, $current - floor($max_visible / 2));
+                    $end = min($total_p, $start + $max_visible - 1);
+                    
+                    if ($end - $start + 1 < $max_visible) {
+                        $start = max(1, $end - $max_visible + 1);
+                    }
+                    
+                    $params = $filtros;
+                ?>
+
+                <!-- Botón Primero -->
+                <?php if ($current > 1): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => 1])) ?>" class="btn btn-secondary">⇤ Primero</a>
                 <?php endif; ?>
-            </tbody>
-        </table>
+
+                <!-- Botón Anterior -->
+                <?php if ($current > 1): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => $current - 1])) ?>" class="btn btn-warning">← Anterior</a>
+                <?php else: ?>
+                    <button class="btn btn-secondary" disabled>← Anterior</button>
+                <?php endif; ?>
+                
+                <div class="pagination-numbers">
+                    <?php for ($i = $start; $i <= $end; $i++): ?>
+                        <a href="?<?= http_build_query(array_merge($params, ['page' => $i])) ?>" 
+                           class="btn <?= $i == $current ? 'btn-primary active' : 'btn-light' ?> page-num">
+                            <?= $i ?>
+                        </a>
+                    <?php endfor; ?>
+                </div>
+                
+                <!-- Botón Siguiente -->
+                <?php if ($current < $total_p): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => $current + 1])) ?>" class="btn btn-warning">Siguiente →</a>
+                <?php else: ?>
+                    <button class="btn btn-secondary" disabled>Siguiente →</button>
+                <?php endif; ?>
+
+                <!-- Botón Último -->
+                <?php if ($current < $total_p): ?>
+                    <a href="?<?= http_build_query(array_merge($params, ['page' => $total_p])) ?>" class="btn btn-secondary">Último ⇥</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
-</div>
+
 
 <style>
-.badge { padding: 5px 10px; border-radius: 12px; color: white; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.btn-sm { padding: 2px 8px; font-size: 12px; }
+/* Custom Badges for Container Types */
+.badge-amarro {
+    background-color: #6f42c1;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 50px; /* Pill shape */
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.badge-libro {
+    background-color: #17a2b8;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 50px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.85em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+.table-responsive { overflow-x: auto; }
+
+/* Table Styles to match Documentos */
+.table thead th {
+    background-color: #1B3C84;
+    color: white;
+    border-bottom: none;
+    vertical-align: middle;
+}
+.table thead th a {
+    color: white !important;
+}
+.table tbody tr:hover {
+    background-color: rgba(27, 60, 132, 0.05);
+}
+
+/* Pagination Styles - Matching Documentos EXACTLY */
+.pagination { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    gap: 8px; 
+    padding: 25px 0; 
+    flex-wrap: wrap; 
+}
+.pagination-numbers { 
+    display: flex; 
+    gap: 2px; 
+    background: #fff;
+    padding: 3px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+.btn-light { 
+    background: white; 
+    border: none; 
+    color: #007bff; 
+    font-weight: 500;
+}
+.btn-light:hover {
+    background-color: #e9ecef;
+    color: #0056b3;
+    text-decoration: none;
+}
+.btn-warning { 
+    background: #ffc107; 
+    color: #212529; 
+    border: 1px solid #ffc107; 
+    font-weight: 500;
+}
+.btn-warning:hover {
+    background: #e0a800;
+    border-color: #d39e00;
+    color: #212529;
+}
+.btn-secondary {
+    background: #6c757d;
+    border: 1px solid #6c757d;
+    color: white;
+}
+.btn-secondary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+.pagination .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    min-width: 38px;
+    padding: 0 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.2s;
+    line-height: normal; 
+}
+.page-num { 
+    border-radius: 2px; 
+}
+.btn-primary.active { 
+    background: #1B3C84; 
+    border-color: #1B3C84; 
+    color: white; 
+    cursor: default; 
+    z-index: 1;
+}
+.btn-primary.active:focus {
+    box-shadow: none;
+}
+
+/* Search Form Layout - Documentos Style */
+.search-form { padding: 20px; }
+.form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; }
+.form-group { flex: 1; min-width: 200px; }
+.form-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; align-items: center; }
+.form-actions .btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px; height: 38px; }
+
 </style>
 
 <!-- Modal Cambio Ubicación Masiva -->

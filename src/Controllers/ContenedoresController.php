@@ -4,38 +4,104 @@ namespace TAMEP\Controllers;
 
 use TAMEP\Models\ContenedorFisico;
 use TAMEP\Models\Ubicacion;
+use TAMEP\Models\TipoDocumento;
 
 class ContenedoresController extends BaseController
 {
     private $contenedorFisico;
     private $ubicacion;
+    private $tipoDocumento;
     
     public function __construct()
     {
         parent::__construct();
         $this->contenedorFisico = new ContenedorFisico();
         $this->ubicacion = new Ubicacion();
+        $this->tipoDocumento = new TipoDocumento();
     }
     
     public function index()
     {
         $this->requireAuth();
         
+        // 1. Limpiar filtros explicitamente
+        if (isset($_GET['clean'])) {
+            unset($_SESSION['contenedores_filters']);
+            $this->redirect('/contenedores');
+            return;
+        }
+        
+        // 2. Detectar nuevos filtros
+        $hasFilters = isset($_GET['search']) || // Generic search param if added later
+                      isset($_GET['tipo_documento']) || 
+                      isset($_GET['numero']) || 
+                      isset($_GET['gestion']) || 
+                      isset($_GET['tipo_contenedor']) || 
+                      isset($_GET['ubicacion_id']) || 
+                      isset($_GET['sort']) ||
+                      isset($_GET['per_page']);
+                      
+        if ($hasFilters) {
+            $_SESSION['contenedores_filters'] = [
+                'tipo_documento' => $_GET['tipo_documento'] ?? '',
+                'numero' => $_GET['numero'] ?? '',
+                'gestion' => $_GET['gestion'] ?? '',
+                'tipo_contenedor' => $_GET['tipo_contenedor'] ?? '',
+                'ubicacion_id' => $_GET['ubicacion_id'] ?? '',
+                'sort' => $_GET['sort'] ?? '',
+                'order' => $_GET['order'] ?? '',
+                'per_page' => $_GET['per_page'] ?? 20
+            ];
+        } elseif (isset($_SESSION['contenedores_filters']) && empty($_GET['page'])) {
+            // Restaurar sesión
+            $params = http_build_query($_SESSION['contenedores_filters']);
+            $this->redirect('/contenedores?' . $params);
+            return;
+        }
+        
+        // Params
+        $tipo_documento = $_GET['tipo_documento'] ?? '';
+        $numero = $_GET['numero'] ?? '';
+        $gestion = $_GET['gestion'] ?? '';
+        $tipo_contenedor = $_GET['tipo_contenedor'] ?? '';
+        $ubicacion_id = $_GET['ubicacion_id'] ?? '';
+        
+        $sort = $_GET['sort'] ?? '';
+        $order = $_GET['order'] ?? 'asc';
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        
+        $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 20;
+        if ($perPage < 1) $perPage = 20;
+        if ($perPage > 200) $perPage = 200;
+        
         $filtros = [
-            'tipo_documento' => $_GET['tipo_documento'] ?? null,
-            'numero' => $_GET['numero'] ?? null,
-            'gestion' => $_GET['gestion'] ?? null,
-            'tipo_contenedor' => $_GET['tipo_contenedor'] ?? null,
-            'ubicacion_id' => $_GET['ubicacion_id'] ?? null
+            'tipo_documento' => $tipo_documento,
+            'numero' => $numero,
+            'gestion' => $gestion,
+            'tipo_contenedor' => $tipo_contenedor,
+            'ubicacion_id' => $ubicacion_id,
+            'sort' => $sort,
+            'order' => $order,
+            'page' => $page,
+            'per_page' => $perPage
         ];
         
         $contenedores = $this->contenedorFisico->buscar($filtros);
+        $total = $this->contenedorFisico->contarBusqueda($filtros);
         
         $this->view('contenedores.index', [
             'contenedores' => $contenedores,
             'user' => $this->getCurrentUser(),
             'ubicaciones' => $this->ubicacion->getActive(),
-            'filtros' => $filtros
+            'tiposDocumento' => $this->tipoDocumento->getAll(),
+            'filtros' => $filtros,
+            'paginacion' => [
+                'current' => $page,
+                'total' => $total,
+                'per_page' => $perPage,
+                'page' => $page,
+                'total_pages' => ceil($total / $perPage)
+            ]
         ]);
     }
     
@@ -44,6 +110,7 @@ class ContenedoresController extends BaseController
         $this->requireAuth();
         $this->view('contenedores.crear', [
             'ubicaciones' => $this->ubicacion->getActive(),
+            'tiposDocumento' => $this->tipoDocumento->getActive(),
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -71,6 +138,28 @@ class ContenedoresController extends BaseController
         }
     }
     
+    public function ver($id)
+    {
+        $this->requireAuth();
+        $contenedor = $this->contenedorFisico->find($id);
+        
+        if (!$contenedor) {
+            $this->redirect('/contenedores');
+        }
+        
+        $documentos = $this->contenedorFisico->getDocumentos($id);
+        
+        // Cargar ubicación si existe
+        if ($contenedor['ubicacion_id']) {
+            $contenedor['ubicacion'] = $this->ubicacion->find($contenedor['ubicacion_id']);
+        }
+
+        $this->view('contenedores.ver', [
+            'contenedor' => $contenedor,
+            'documentos' => $documentos,
+            'user' => $this->getCurrentUser()
+        ]);
+    }
     public function editar($id)
     {
         $this->requireAuth();

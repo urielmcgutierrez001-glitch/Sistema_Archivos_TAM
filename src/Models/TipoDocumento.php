@@ -24,6 +24,16 @@ class TipoDocumento extends BaseModel
             "SELECT * FROM {$this->table} WHERE activo = 1 ORDER BY orden ASC"
         );
     }
+
+    /**
+     * Get all document types
+     */
+    public function getAll()
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM {$this->table} ORDER BY nombre ASC"
+        );
+    }
     
     /**
      * Get schema fields for a specific type

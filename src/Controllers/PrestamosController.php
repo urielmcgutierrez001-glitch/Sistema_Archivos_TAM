@@ -193,68 +193,120 @@ class PrestamosController extends BaseController
     {
         $this->requireAuth();
         
-        // Obtener parámetros de búsqueda
+        // 1. Limpiar filtros
+        if (isset($_GET['clean'])) {
+            unset($_SESSION['prestamos_nuevo_filters']);
+            $this->redirect('/prestamos/nuevo');
+            return;
+        }
+
+        // 2. Filtros
+        $hasFilters = isset($_GET['search']) || isset($_GET['gestion']) || isset($_GET['tipo_documento']) ||
+                      isset($_GET['sort']) || isset($_GET['per_page']);
+
+        if ($hasFilters) {
+            $_SESSION['prestamos_nuevo_filters'] = [
+                'search' => $_GET['search'] ?? '',
+                'gestion' => $_GET['gestion'] ?? '',
+                'tipo_documento' => $_GET['tipo_documento'] ?? '',
+                'sort' => $_GET['sort'] ?? '',
+                'order' => $_GET['order'] ?? '',
+                'per_page' => $_GET['per_page'] ?? 20
+            ];
+        } elseif (isset($_SESSION['prestamos_nuevo_filters']) && empty($_GET['page'])) {
+             $params = http_build_query($_SESSION['prestamos_nuevo_filters']);
+             $this->redirect('/prestamos/nuevo?' . $params);
+             return;
+        }
+
         $search = $_GET['search'] ?? '';
         $gestion = $_GET['gestion'] ?? '';
         $tipo_documento = $_GET['tipo_documento'] ?? '';
+        $sort = $_GET['sort'] ?? '';
+        $order = $_GET['order'] ?? 'asc';
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         
-        $documentos = [];
-        
-        // Buscar según el tipo de documento
-        if ($tipo_documento === 'HOJA_RUTA_DIARIOS') {
-            // Buscar en registro_hojas_ruta
-            $where = ["hr.activo = 1"];
-            $params = [];
-            
-            if (!empty($search)) {
-                $where[] = "(hr.nro_comprobante_diario = ? OR hr.nro_hoja_ruta = ? OR hr.rubro LIKE ? OR hr.interesado LIKE ?)";
-                $params[] = $search; // Exact
-                $params[] = $search; // Exact
-                $params[] = "%$search%";
-                $params[] = "%$search%";
-            }
-            
-            if (!empty($gestion)) {
-                $where[] = "hr.gestion = ?";
-                $params[] = $gestion;
-            }
-            
-            $whereClause = 'WHERE ' . implode(' AND ', $where);
-            
-            $sql = "SELECT hr.id,
-                           hr.gestion,
-                           hr.nro_comprobante_diario as nro_comprobante,
-                           hr.nro_hoja_ruta,
-                           hr.rubro,
-                           hr.interesado,
-                            'HOJA_RUTA_DIARIOS' as tipo_documento,
-                            cf.tipo_contenedor,
-                            cf.numero as contenedor_numero,
-                            ub.nombre as ubicacion_fisica
-                    FROM registro_hojas_ruta hr
-                    LEFT JOIN contenedores_fisicos cf ON hr.contenedor_fisico_id = cf.id
-                    LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
-                    {$whereClause}
-                    ORDER BY hr.gestion DESC, hr.nro_comprobante_diario DESC
-                    LIMIT 100";
-            
-            $documentos = $this->hojaRuta->getDb()->fetchAll($sql, $params);
+        $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 20;
+        if ($perPage < 1) $perPage = 20;
+        if ($perPage > 200) $perPage = 200;
 
-        } else {
-            // Buscar en documentos (otros tipos)
+        $documentos = [];
+        $total = 0;
+        
+        // Solo buscar si hay filtros (optimización)
+        if (!empty($search) || !empty($gestion) || !empty($tipo_documento)) {
             
-            // OPTIMIZACIÓN: Si no hay filtros, no buscar NADA para evitar sobrecarga (Error /tmp full)
-            if (empty($search) && empty($gestion) && empty($tipo_documento)) {
-                $documentos = [];
+            // Parametros comunes
+            $limit = $perPage;
+            $offset = ($page - 1) * $limit;
+            $orderDir = strtoupper($order) === 'ASC' ? 'ASC' : 'DESC';
+
+            // Buscar según el tipo de documento
+            if ($tipo_documento === 'HOJA_RUTA_DIARIOS') {
+                $where = ["hr.activo = 1"];
+                $params = [];
+                
+                if (!empty($search)) {
+                    if (preg_match('/^(\d+)-(\d+)$/', $search, $matches)) {
+                        $min = min((int)$matches[1], (int)$matches[2]);
+                        $max = max((int)$matches[1], (int)$matches[2]);
+                        $where[] = "CAST(hr.nro_comprobante_diario AS UNSIGNED) BETWEEN ? AND ?";
+                        $params[] = $min; $params[] = $max;
+                    } else {
+                        $where[] = "(hr.nro_comprobante_diario = ? OR hr.nro_hoja_ruta = ? OR hr.rubro LIKE ? OR hr.interesado LIKE ?)";
+                        $params[] = $search; $params[] = $search; $params[] = "%$search%"; $params[] = "%$search%";
+                    }
+                }
+                
+                if (!empty($gestion)) {
+                    $where[] = "hr.gestion = ?";
+                    $params[] = $gestion;
+                }
+                
+                $whereClause = 'WHERE ' . implode(' AND ', $where);
+                
+                // Sorting HR
+                $orderBy = "hr.gestion DESC, hr.nro_comprobante_diario DESC";
+                if ($sort === 'gestion') $orderBy = "hr.gestion $orderDir";
+                if ($sort === 'nro_comprobante') $orderBy = "hr.nro_comprobante_diario $orderDir";
+                if ($sort === 'ubicacion') $orderBy = "ub.nombre $orderDir";
+                
+                // Count
+                $sqlCount = "SELECT COUNT(*) as total FROM registro_hojas_ruta hr 
+                             LEFT JOIN contenedores_fisicos cf ON hr.contenedor_fisico_id = cf.id 
+                             LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id 
+                             {$whereClause}";
+                $resCount = $this->hojaRuta->getDb()->fetchOne($sqlCount, $params);
+                $total = $resCount['total'] ?? 0;
+
+                // Data
+                $sql = "SELECT hr.id, hr.gestion, hr.nro_comprobante_diario as nro_comprobante, hr.nro_hoja_ruta,
+                               hr.rubro, hr.interesado, 'HOJA_RUTA_DIARIOS' as tipo_documento,
+                               cf.tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica
+                        FROM registro_hojas_ruta hr
+                        LEFT JOIN contenedores_fisicos cf ON hr.contenedor_fisico_id = cf.id
+                        LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
+                        {$whereClause}
+                        ORDER BY {$orderBy}
+                        LIMIT {$limit} OFFSET {$offset}";
+                
+                $documentos = $this->hojaRuta->getDb()->fetchAll($sql, $params);
+
             } else {
-                // Permitimos ver todos los estados relevantes, aunque algunos no se puedan prestar
+                // Documentos comunes
                 $where = ["rd.estado_documento IN ('DISPONIBLE', 'NO UTILIZADO', 'ANULADO', 'FALTA', 'PRESTADO')"];
                 $params = [];
                 
                 if (!empty($search)) {
-                    $where[] = "(rd.nro_comprobante = ? OR rd.codigo_abc = ?)";
-                    $params[] = $search; // Exact
-                    $params[] = $search; // Exact
+                    if (preg_match('/^(\d+)-(\d+)$/', $search, $matches)) {
+                        $min = min((int)$matches[1], (int)$matches[2]);
+                        $max = max((int)$matches[1], (int)$matches[2]);
+                        $where[] = "CAST(rd.nro_comprobante AS UNSIGNED) BETWEEN ? AND ?";
+                        $params[] = $min; $params[] = $max;
+                    } else {
+                        $where[] = "(rd.nro_comprobante = ? OR rd.codigo_abc = ?)";
+                        $params[] = $search; $params[] = $search;
+                    }
                 }
                 
                 if (!empty($gestion)) {
@@ -269,13 +321,32 @@ class PrestamosController extends BaseController
                 
                 $whereClause = 'WHERE ' . implode(' AND ', $where);
                 
+                // Sorting Docs
+                $orderBy = "rd.gestion DESC, rd.nro_comprobante DESC";
+                if ($sort === 'gestion') $orderBy = "rd.gestion $orderDir";
+                if ($sort === 'nro_comprobante') {
+                     if ($orderDir === 'ASC') $orderBy = "CAST(rd.nro_comprobante AS UNSIGNED) ASC, rd.nro_comprobante ASC";
+                     else $orderBy = "CAST(rd.nro_comprobante AS UNSIGNED) DESC, rd.nro_comprobante DESC";
+                }
+                if ($sort === 'ubicacion') $orderBy = "ub.nombre $orderDir";
+                if ($sort === 'estado') $orderBy = "rd.estado_documento $orderDir";
+
+                // Count
+                $sqlCount = "SELECT COUNT(*) as total FROM documentos rd 
+                             LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id 
+                             LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id 
+                             {$whereClause}";
+                $resCount = $this->documento->getDb()->fetchOne($sqlCount, $params);
+                $total = $resCount['total'] ?? 0;
+
+                // Data
                 $sql = "SELECT rd.*, cf.tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica
                         FROM documentos rd
                         LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
                         LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
                         {$whereClause}
-                        ORDER BY rd.gestion DESC, rd.nro_comprobante DESC
-                        LIMIT 50";
+                        ORDER BY {$orderBy}
+                        LIMIT {$limit} OFFSET {$offset}";
                 
                 $documentos = $this->documento->getDb()->fetchAll($sql, $params);
             }
@@ -290,7 +361,17 @@ class PrestamosController extends BaseController
             'filtros' => [
                 'search' => $search,
                 'gestion' => $gestion,
-                'tipo_documento' => $tipo_documento
+                'tipo_documento' => $tipo_documento,
+                'sort' => $sort,
+                'order' => $order,
+                'per_page' => $perPage
+            ],
+            'paginacion' => [
+                'current' => $page,
+                'total' => $total,
+                'per_page' => $perPage,
+                'page' => $page,
+                'total_pages' => ceil($total / $perPage)
             ],
             'user' => $this->getCurrentUser()
         ]);
@@ -304,7 +385,7 @@ class PrestamosController extends BaseController
         $this->requireAuth();
         
         // Validar
-        if (empty($_POST['unidad_area_id']) || empty($_POST['fecha_devolucion']) || empty($_POST['documentos'])) {
+        if (empty($_POST['unidad_area_id']) || empty($_POST['documentos'])) {
             Session::flash('error', 'Debe completar todos los campos obligatorios');
             $this->redirect('/prestamos/nuevo');
         }
@@ -316,15 +397,27 @@ class PrestamosController extends BaseController
             $this->redirect('/prestamos/nuevo');
         }
 
+        // Datos del Formulario
+        $fechaPrestamo = !empty($_POST['fecha_prestamo']) ? $_POST['fecha_prestamo'] : date('Y-m-d');
+        $fechaDevolucion = !empty($_POST['fecha_devolucion']) ? $_POST['fecha_devolucion'] : null;
+        $esHistorico = !empty($_POST['es_historico']) && $_POST['es_historico'] == '1';
+        $estadoInicial = !empty($_POST['estado_inicial']) ? $_POST['estado_inicial'] : 'En Proceso';
+        
+        // Si no es histórico, la fecha de devolución es obligatoria (aunque el front ya lo valida)
+        if (!$esHistorico && empty($fechaDevolucion)) {
+             // Fallback default +2 weeks if somehow bypassed
+             $fechaDevolucion = date('Y-m-d', strtotime('+14 days'));
+        }
+
         // Crear Encabezado
         $headerData = [
             'usuario_id' => Session::user()['id'],
             'unidad_area_id' => $_POST['unidad_area_id'],
             'nombre_prestatario' => $_POST['nombre_prestatario'] ?? null,
-            'fecha_prestamo' => date('Y-m-d'),
-            'fecha_devolucion_esperada' => $_POST['fecha_devolucion'],
+            'fecha_prestamo' => $fechaPrestamo,
+            'fecha_devolucion_esperada' => $fechaDevolucion,
             'observaciones' => $_POST['observaciones'] ?? null,
-            'estado' => 'En Proceso'
+            'estado' => $estadoInicial // 'En Proceso', 'Prestado', or 'Devuelto'
         ];
 
         $headerId = $this->prestamoHeader->create($headerData);
@@ -338,7 +431,6 @@ class PrestamosController extends BaseController
         $errores = 0;
         
         foreach ($documentosIds as $docId) {
-            // Verificar que el documento existe (ya no filtramos por estado estricto)
             $documento = $this->documento->find($docId);
             
             if (!$documento) {
@@ -346,26 +438,41 @@ class PrestamosController extends BaseController
                 continue;
             }
             
-            // Ya NO verificamos estadosPermitidos, permitimos seleccionar "cualquiera"
-            // $estadosPermitidos = ['DISPONIBLE', 'NO UTILIZADO', 'ANULADO'];
-            
+            // Determine detail state
+            // If header is 'Devuelto', details should be 'Devuelto' too
+            $detailState = $estadoInicial;
+            $fechaDevReal = ($estadoInicial === 'Devuelto') ? ($fechaDevolucion ?? date('Y-m-d')) : null;
+
             // Crear préstamo detalle
             $data = [
                 'encabezado_id' => $headerId,
                 'documento_id' => $docId,
                 'contenedor_fisico_id' => $documento['contenedor_fisico_id'] ?? null,
-                'usuario_id' => $_POST['usuario_id'],
-                'fecha_prestamo' => date('Y-m-d'),
-                'fecha_devolucion_esperada' => $_POST['fecha_devolucion'],
+                'usuario_id' => $_POST['unidad_area_id'], // Note: This field in detail is technically 'usuario_id' but usually refers to user who registered OR borrower. In `guardar` simpler method it was used as unit? Let's keep consistency with previous code: `usuario_id` => $_POST['usuario_id'] which was missing in previous method, actually previous code used `$_POST['usuario_id']` which was undefined in `guardarMultiple` form! 
+                // Ah, looking at previous code: `usuario_id` => $_POST['usuario_id'] ?? Session::user()['id']? 
+                // In `guardarMultiple` original code, `usuario_id` was NOT in the form. It likely failed or used null. 
+                // Let's use Session user ID as the registrant.
+                'usuario_id' => Session::user()['id'],
+                'fecha_prestamo' => $fechaPrestamo,
+                'fecha_devolucion_esperada' => $fechaDevolucion,
+                'fecha_devolucion_real' => $fechaDevReal,
                 'observaciones' => $_POST['observaciones'] ?? null,
-                'estado' => 'En Proceso'
+                'estado' => $detailState
             ];
             
             $id = $this->prestamo->create($data);
             
             if ($id) {
-                // Actualizar estado del documento - REMOVED: Status changes only after processing
-                // $this->documento->update($docId, ['estado_documento' => 'PRESTADO']);
+                // Actualizar estado del documento
+                if ($detailState === 'Prestado') {
+                    $this->documento->update($docId, ['estado_documento' => 'PRESTADO']);
+                }
+                // Si es 'Devuelto', no cambiamos estado o lo dejamos/volvemos a 'DISPONIBLE'?
+                // Si es histórico y ya devuelto, el documento debería estar DISPONIBLE (o lo que sea actual).
+                // No deberíamos tocar el documento si ya fue devuelto, salvo asegurarnos que NO esté PRESTADO.
+                // Pero si el usuario está creando historial, asumimos que el documento YA ESTÁ en su sitio.
+                // Así que no hacemos update si es Devuelto.
+                
                 $exitosos++;
             } else {
                 $errores++;
@@ -373,14 +480,19 @@ class PrestamosController extends BaseController
         }
         
         if ($exitosos > 0) {
-            Session::flash('success', "Préstamo registrado: {$exitosos} documento(s) prestado(s)");
+            Session::flash('success', "Préstamo registrado: {$exitosos} documento(s). Estado: {$estadoInicial}");
         } else {
-            // Si fallaron todos, eliminar el header (opcional, pero limpio)
-            // Por ahora solo avisar
             Session::flash('error', 'No se pudo registrar ningún documento en el préstamo');
         }
         
-        $this->redirect('/prestamos/procesar/' . $headerId);
+        // Redirect logic
+        // If 'En Proceso', go to processing
+        // If 'Prestado' or 'Devuelto', go to View
+        if ($estadoInicial === 'En Proceso') {
+            $this->redirect('/prestamos/procesar/' . $headerId);
+        } else {
+            $this->redirect('/prestamos/ver/' . $headerId);
+        }
     }
     
     /**
@@ -478,8 +590,8 @@ class PrestamosController extends BaseController
         fputcsv($output, ['Solicitante (Unidad):', $prestamo['unidad_nombre'] ?? 'N/A']);
         fputcsv($output, ['Prestatario:', $prestamo['nombre_prestatario'] ?? 'N/A']);
         fputcsv($output, ['Registrado por:', $prestamo['usuario_nombre']]);
-        fputcsv($output, ['Fecha Prestamo:', $prestamo['fecha_prestamo']]);
-        fputcsv($output, ['Devolucion Esperada:', $prestamo['fecha_devolucion_esperada']]);
+        fputcsv($output, ['Fecha Prestamo:', date('d/m/Y', strtotime($prestamo['fecha_prestamo']))]);
+        fputcsv($output, ['Devolucion Esperada:', $prestamo['fecha_devolucion_esperada'] ? date('d/m/Y', strtotime($prestamo['fecha_devolucion_esperada'])) : 'N/A']);
         fputcsv($output, []); // Empty line
         
         // Columns

@@ -20,8 +20,13 @@ $pageTitle = 'Nuevo Contenedor';
             </div>
             
             <div class="form-group">
-                <label for="tipo_documento">Tipo de Documento (Contenido)</label>
-                <input type="text" name="tipo_documento" id="tipo_documento" class="form-control" placeholder="Ej: REGISTRO_CEPS">
+                <label for="tipo_documento">Tipo de Documento (Contenido) <span style="color:red">*</span></label>
+                <select name="tipo_documento" id="tipo_documento" class="form-control" required>
+                    <option value="">-- Seleccionar --</option>
+                    <?php foreach ($tiposDocumento as $td): ?>
+                        <option value="<?= $td['codigo'] ?>"><?= htmlspecialchars($td['nombre']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <div class="form-group">

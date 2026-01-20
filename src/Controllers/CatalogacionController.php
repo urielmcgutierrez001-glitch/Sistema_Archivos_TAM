@@ -52,7 +52,8 @@ class CatalogacionController extends BaseController
         // 2. Detectar si hay nuevos filtros en $_GET (Búsqueda activa)
         // Verificamos si hay algún parámetro de búsqueda presente
         $hasFilters = isset($_GET['search']) || isset($_GET['gestion']) || isset($_GET['ubicacion_id']) || 
-                      isset($_GET['estado_documento']) || isset($_GET['tipo_documento']);
+                      isset($_GET['estado_documento']) || isset($_GET['tipo_documento']) || 
+                      isset($_GET['sort']); // Added sort to filter detection
         
         if ($hasFilters) {
             // Guardar filtros en sesión
@@ -61,7 +62,9 @@ class CatalogacionController extends BaseController
                 'gestion' => $_GET['gestion'] ?? '',
                 'ubicacion_id' => $_GET['ubicacion_id'] ?? '',
                 'estado_documento' => $_GET['estado_documento'] ?? '',
-                'tipo_documento' => $_GET['tipo_documento'] ?? ''
+                'tipo_documento' => $_GET['tipo_documento'] ?? '',
+                'sort' => $_GET['sort'] ?? '',
+                'order' => $_GET['order'] ?? ''
             ];
         } 
         // 3. Si NO hay filtros en $_GET (acceso directo), pero existen en sesión -> Restaurar
@@ -85,9 +88,26 @@ class CatalogacionController extends BaseController
         $ubicacion_id = $_GET['ubicacion_id'] ?? '';
         $estado_documento = $_GET['estado_documento'] ?? '';
         $tipo_documento = $_GET['tipo_documento'] ?? '';
+        $sort = $_GET['sort'] ?? '';
+        $order = $_GET['order'] ?? 'asc';
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $perPage = 20;
         
+        // Per Page Logic
+        $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 20;
+        if ($perPage < 1) $perPage = 20; // Minimum limit
+        if ($perPage > 200) $perPage = 200; // Maximum limit to prevent performance issues
+        
+        // Guardar per_page en sesión si cambia
+        if (isset($_GET['per_page'])) {
+            if (!isset($_SESSION['catalogacion_filters'])) {
+                $_SESSION['catalogacion_filters'] = [];
+            }
+            $_SESSION['catalogacion_filters']['per_page'] = $perPage;
+        } elseif (isset($_SESSION['catalogacion_filters']['per_page'])) {
+            // Restaurar de sesión si no viene en GET
+            $perPage = $_SESSION['catalogacion_filters']['per_page'];
+        }
+
         // Realizar búsqueda - usar HojaRuta si es ese tipo
         if ($search || $gestion || $ubicacion_id || $estado_documento || $tipo_documento) {
             // Buscar en documentos (otros tipos)
@@ -97,6 +117,8 @@ class CatalogacionController extends BaseController
                 'ubicacion_id' => $ubicacion_id,
                 'estado_documento' => $estado_documento,
                 'tipo_documento' => $tipo_documento,
+                'sort' => $sort,
+                'order' => $order,
                 'page' => $page,
                 'per_page' => $perPage
             ]);
@@ -112,7 +134,9 @@ class CatalogacionController extends BaseController
             // Sin filtros, mostrar los más recientes usando buscarAvanzado sin filtros
             $documentos = $this->documento->buscarAvanzado([
                 'page' => $page,
-                'per_page' => $perPage
+                'per_page' => $perPage,
+                'sort' => $sort,
+                'order' => $order
             ]);
             $total = $this->documento->count();
         }
@@ -131,7 +155,10 @@ class CatalogacionController extends BaseController
                 'gestion' => $gestion,
                 'ubicacion_id' => $ubicacion_id,
                 'estado_documento' => $estado_documento,
-                'tipo_documento' => $tipo_documento
+                'tipo_documento' => $tipo_documento,
+                'sort' => $sort,
+                'order' => $order,
+                'per_page' => $perPage
             ],
             'paginacion' => [
                 'page' => $page,
@@ -314,30 +341,57 @@ class CatalogacionController extends BaseController
     /**
      * Actualizar contenedor de un lote de documentos
      */
-    public function actualizarLoteContenedor()
+    public function actualizarLote()
     {
         $this->requireAuth();
         
         $ids = $_POST['ids'] ?? [];
         $contenedor_id = $_POST['contenedor_id'] ?? null;
+        $estado_documento = $_POST['estado_documento'] ?? null;
         
-        if (empty($ids) || empty($contenedor_id)) {
-            \TAMEP\Core\Session::flash('error', 'Debe seleccionar documentos y un contenedor');
+        if (empty($ids)) {
+            \TAMEP\Core\Session::flash('error', 'Debe seleccionar al menos un documento');
             $this->redirect('/catalogacion?modo_lotes=1');
+            return;
+        }
+
+        // Validate at least one action is taken
+        if (empty($contenedor_id) && empty($estado_documento)) {
+             \TAMEP\Core\Session::flash('warning', 'No se seleccionó ninguna acción (Contenedor o Estado) para actualizar.');
+             $this->redirect('/catalogacion?modo_lotes=1');
+             return;
         }
         
-        // Decodificar IDs si vienen como string JSON (opcional, dependiendo de como lo enviemos)
+        // Decodificar IDs si vienen como string JSON
         if (is_string($ids)) {
             $ids = json_decode($ids, true);
         }
         
+        // Build Update Array
+        $updateData = [];
+        if (!empty($contenedor_id)) {
+            $updateData['contenedor_fisico_id'] = $contenedor_id;
+        }
+        if (!empty($estado_documento)) {
+            $updateData['estado_documento'] = $estado_documento;
+        }
+
         $count = 0;
         foreach ($ids as $id) {
-            $this->documento->update($id, ['contenedor_fisico_id' => $contenedor_id]);
-            $count++;
+            if ($this->documento->update($id, $updateData)) {
+                $count++;
+            }
         }
         
-        \TAMEP\Core\Session::flash('success', "Se actualizaron $count documentos al nuevo contenedor");
+        $msg = "Se actualizaron $count documentos";
+        if (count($updateData) > 0) {
+            $changes = [];
+            if(isset($updateData['contenedor_fisico_id'])) $changes[] = "Contenedor";
+            if(isset($updateData['estado_documento'])) $changes[] = "Estado";
+            $msg .= " (" . implode(', ', $changes) . ")";
+        } 
+        
+        \TAMEP\Core\Session::flash('success', $msg);
         $this->redirect('/catalogacion?modo_lotes=1');
     }
 
