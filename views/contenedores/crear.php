@@ -24,7 +24,7 @@ $pageTitle = 'Nuevo Contenedor';
                 <select name="tipo_documento" id="tipo_documento" class="form-control" required>
                     <option value="">-- Seleccionar --</option>
                     <?php foreach ($tiposDocumento as $td): ?>
-                        <option value="<?= $td['codigo'] ?>"><?= htmlspecialchars($td['nombre']) ?></option>
+                        <option value="<?= $td['id'] ?>"><?= htmlspecialchars($td['nombre']) ?> (<?= htmlspecialchars($td['codigo']) ?>)</option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -33,10 +33,10 @@ $pageTitle = 'Nuevo Contenedor';
                 <label for="numero">Número <span style="color:red">*</span></label>
                 <input type="number" name="numero" id="numero" class="form-control" required placeholder="Ej: 1, 15, 100...">
             </div>
-
+            
             <div class="form-group">
                 <label for="codigo_abc">Código ABC (Opcional)</label>
-                <input type="text" name="codigo_abc" id="codigo_abc" class="form-control" placeholder="Ej: A-123">
+                <input type="text" name="codigo_abc" id="codigo_abc" class="form-control" placeholder="Ej: A-1">
             </div>
         </div>
         

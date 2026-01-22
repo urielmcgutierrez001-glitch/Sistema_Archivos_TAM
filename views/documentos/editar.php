@@ -68,10 +68,7 @@ $pageTitle = 'Editar Documento';
                             <option value="<?= $cont['id'] ?>" 
                                     data-ubicacion="<?= $cont['ubicacion_id'] ?? '' ?>"
                                     <?= ($documento['contenedor_fisico_id'] ?? '') == $cont['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($cont['tipo_documento_codigo'] ?? 'DOC') ?> <?= htmlspecialchars($cont['gestion']) ?> <?= htmlspecialchars($cont['tipo_contenedor']) ?> #<?= htmlspecialchars($cont['numero']) ?>
-                                <?php if (!empty($cont['codigo_abc'])): ?>
-                                    (<?= htmlspecialchars($cont['codigo_abc']) ?>)
-                                <?php endif; ?>
+                                [<?= htmlspecialchars($cont['tipo_documento_codigo'] ?? '???') ?>] <?= htmlspecialchars($cont['gestion']) ?> <?= htmlspecialchars($cont['tipo_contenedor']) ?> #<?= htmlspecialchars($cont['numero']) ?> <?= !empty($cont['codigo_abc']) ? '('.htmlspecialchars($cont['codigo_abc']).')' : '' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

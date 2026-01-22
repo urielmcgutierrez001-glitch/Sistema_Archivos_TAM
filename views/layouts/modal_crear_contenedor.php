@@ -11,6 +11,19 @@
             <!-- Hidden input to store who called us -->
             <input type="hidden" id="targetSelectId" value="">
 
+            <!-- New Field: Tipo Documento -->
+            <div class="form-group" style="margin-bottom:15px;">
+                <label>Tipo de Documento (Para etiqueta DIA/RI/etc) <span style="color:red">*</span></label>
+                <select name="tipo_documento" id="quick_tipo_documento" class="form-control" required style="width:100%; padding:8px;">
+                    <option value="">Seleccione...</option>
+                    <?php if(isset($tiposDocumento)): ?>
+                        <?php foreach($tiposDocumento as $td): ?>
+                            <option value="<?= $td['id'] ?>"><?= htmlspecialchars($td['nombre']) ?> (<?= htmlspecialchars($td['codigo']) ?>)</option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+
             <div class="form-group" style="margin-bottom:15px;">
                 <label>Tipo de Contenedor <span style="color:red">*</span></label>
                 <select name="tipo_contenedor" class="form-control" required style="width:100%; padding:8px;">
@@ -24,9 +37,10 @@
                 <input type="number" name="numero" class="form-control" required placeholder="Ej: 1" style="width:100%; padding:8px; box-sizing:border-box;">
             </div>
 
+            <!-- New Field: Codigo ABC -->
             <div class="form-group" style="margin-bottom:15px;">
-                <label>Código ABC (Opcional)</label>
-                <input type="text" name="codigo_abc" class="form-control" placeholder="Ej: A-123" style="width:100%; padding:8px; box-sizing:border-box;">
+                <label>Código ABC</label>
+                <input type="text" name="codigo_abc" class="form-control" placeholder="Opcional" style="width:100%; padding:8px; box-sizing:border-box;">
             </div>
 
             <div class="form-group" style="margin-bottom:15px;">
@@ -78,10 +92,11 @@ function guardarContenedorRapido() {
     if (!form.reportValidity()) return;
 
     const data = {
+        tipo_documento: form.tipo_documento.value,
         tipo_contenedor: form.tipo_contenedor.value,
         numero: form.numero.value,
-        gestion: form.gestion.value,
         codigo_abc: form.codigo_abc.value,
+        gestion: form.gestion.value,
         ubicacion_id: form.ubicacion_id.value
     };
 

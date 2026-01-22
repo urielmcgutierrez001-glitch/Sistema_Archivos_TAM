@@ -21,14 +21,24 @@ $pageTitle = 'Editar Contenedor';
             
             <div class="form-group">
                 <label for="tipo_documento">Tipo de Documento (Contenido)</label>
-                <input type="text" name="tipo_documento" id="tipo_documento" class="form-control" value="<?= htmlspecialchars($contenedor['tipo_documento'] ?? '') ?>">
+                <select name="tipo_documento" id="tipo_documento" class="form-control">
+                    <option value="">-- Seleccionar --</option>
+                    <?php 
+                    $selectedId = $contenedor['tipo_documento_id'] ?? $contenedor['tipo_documento'] ?? '';
+                    foreach ($tiposDocumento as $td): 
+                    ?>
+                        <option value="<?= $td['id'] ?>" <?= $selectedId == $td['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($td['nombre']) ?> (<?= htmlspecialchars($td['codigo']) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <div class="form-group">
                 <label for="numero">Número <span style="color:red">*</span></label>
                 <input type="number" name="numero" id="numero" class="form-control" required value="<?= htmlspecialchars($contenedor['numero']) ?>">
             </div>
-
+            
             <div class="form-group">
                 <label for="codigo_abc">Código ABC (Opcional)</label>
                 <input type="text" name="codigo_abc" id="codigo_abc" class="form-control" value="<?= htmlspecialchars($contenedor['codigo_abc'] ?? '') ?>">

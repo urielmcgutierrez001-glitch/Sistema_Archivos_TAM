@@ -124,10 +124,10 @@ class ContenedoresController extends BaseController
             'tipo_documento' => $_POST['tipo_documento'] ?? null,
             'numero' => $_POST['numero'],
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
+            'codigo_abc' => $_POST['codigo_abc'] ?? null,
             'color' => $_POST['color'] ?? null,
             'bloque_nivel' => $_POST['bloque_nivel'] ?? null,
-            'gestion' => $_POST['gestion'] ?? date('Y'),
-            'codigo_abc' => $_POST['codigo_abc'] ?? null
+            'gestion' => $_POST['gestion'] ?? date('Y')
         ];
         
         if ($this->contenedorFisico->create($data)) {
@@ -175,6 +175,7 @@ class ContenedoresController extends BaseController
         $this->view('contenedores.editar', [
             'contenedor' => $contenedor,
             'ubicaciones' => $this->ubicacion->getActive(),
+            'tiposDocumento' => $this->tipoDocumento->getActive(),
             'documentos' => $documentos,
             'user' => $this->getCurrentUser()
         ]);
@@ -189,10 +190,10 @@ class ContenedoresController extends BaseController
             'tipo_documento' => $_POST['tipo_documento'] ?? null,
             'numero' => $_POST['numero'],
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
+            'codigo_abc' => $_POST['codigo_abc'] ?? null,
             'color' => $_POST['color'] ?? null,
             'bloque_nivel' => $_POST['bloque_nivel'] ?? null,
-            'gestion' => $_POST['gestion'] ?? null,
-            'codigo_abc' => $_POST['codigo_abc'] ?? null
+            'gestion' => $_POST['gestion'] ?? null
         ];
         
         if ($this->contenedorFisico->update($id, $data)) {
@@ -263,10 +264,10 @@ class ContenedoresController extends BaseController
             'tipo_documento' => $input['tipo_documento'] ?? null,
             'numero' => $input['numero'],
             'ubicacion_id' => !empty($input['ubicacion_id']) ? $input['ubicacion_id'] : null,
-            'color' => $input['color'] ?? null,
+            'codigo_abc' => $input['codigo_abc'] ?? null,
+            'color' => $input['color'] ?? null, // Optional
             'bloque_nivel' => $input['bloque_nivel'] ?? null,
-            'gestion' => $input['gestion'] ?? date('Y'),
-            'codigo_abc' => $input['codigo_abc'] ?? null
+            'gestion' => $input['gestion'] ?? date('Y')
         ];
         
         $id = $this->contenedorFisico->create($data);
@@ -274,16 +275,30 @@ class ContenedoresController extends BaseController
         header('Content-Type: application/json');
         
         if ($id) {
-            // Fetch name for display
+            // Fetch names for display
             $ubicacionNombre = '';
             if (!empty($data['ubicacion_id'])) {
                 $ubic = $this->ubicacion->find($data['ubicacion_id']);
                 $ubicacionNombre = $ubic ? ' - ' . $ubic['nombre'] : '';
             }
             
-            // Format: [TIPO] #[NUM] (ABC) - [UBICACION]
-            $abc = !empty($data['codigo_abc']) ? " ({$data['codigo_abc']})" : "";
-            $displayText = "{$data['tipo_contenedor']} #{$data['numero']}{$abc}{$ubicacionNombre}";
+            // Fetch Code for Tipo Documento
+            $tipoDocCodigo = '???';
+            if (!empty($data['tipo_documento'])) {
+                // Assuming types are cached or low cost, but we need the model. 
+                // We don't have TipoDocumento model instance here yet.
+                // We should instantiate it or use existing if any.
+                // We need to inject it or create it.
+                $tipoDocModel = new \TAMEP\Models\TipoDocumento();
+                $td = $tipoDocModel->find($data['tipo_documento']);
+                if ($td) {
+                    $tipoDocCodigo = $td['codigo'];
+                }
+            }
+            
+            $abcPart = !empty($data['codigo_abc']) ? '('.$data['codigo_abc'].')' : '';
+            // Format: [DIA] 2024 AMARRO #3 (ABC)
+            $displayText = "[{$tipoDocCodigo}] {$data['gestion']} {$data['tipo_contenedor']} #{$data['numero']} {$abcPart}";
             
             echo json_encode([
                 'success' => true, 

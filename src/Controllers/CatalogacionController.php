@@ -167,7 +167,7 @@ class CatalogacionController extends BaseController
                 'total' => $total,
                 'total_pages' => $totalPages
             ],
-            'contenedores' => $this->contenedorFisico->all(),
+            'contenedores' => $this->contenedorFisico->buscar(),
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -204,10 +204,11 @@ class CatalogacionController extends BaseController
         $this->requireAuth();
         
         // Obtener contenedores para el select
-        $contenedores = $this->contenedorFisico->all();
+        $contenedores = $this->contenedorFisico->buscar();
         
         $this->view('documentos.crear', [
             'contenedores' => $contenedores,
+            'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -215,13 +216,87 @@ class CatalogacionController extends BaseController
     /**
      * Guardar nuevo documento
      */
+    /**
+     * Guardar nuevo documento (Individual o Lote)
+     */
     public function guardar()
     {
         $this->requireAuth();
         
-        // Validar datos requeridos
-        if (empty($_POST['tipo_documento']) || empty($_POST['gestion']) || empty($_POST['nro_comprobante'])) {
-            \TAMEP\Core\Session::flash('error', 'Debe completar todos los campos obligatorios');
+        $modoLote = isset($_POST['modo_lote']) && $_POST['modo_lote'] == '1';
+
+        // Validar datos comunes
+        if (empty($_POST['tipo_documento']) || empty($_POST['gestion'])) {
+            \TAMEP\Core\Session::flash('error', 'Tipo de documento y Gestión son obligatorios');
+            $this->redirect('/catalogacion/crear');
+        }
+
+        // --- MODO LOTE ---
+        if ($modoLote) {
+            $desde = (int)($_POST['nro_desde'] ?? 0);
+            $hasta = (int)($_POST['nro_hasta'] ?? 0);
+            
+            if ($desde <= 0 || $hasta <= 0 || $desde > $hasta) {
+                \TAMEP\Core\Session::flash('error', 'Rango de números inválido');
+                $this->redirect('/catalogacion/crear');
+            }
+            
+            // Limit removed per user request
+            // if (($hasta - $desde) > 100) { ... }
+
+            $count = 0;
+            
+            // Checkbox arrays
+            $batchExiste = $_POST['batch_existe'] ?? [];
+            $batchAnulado = $_POST['batch_anulado'] ?? [];
+            $batchNoUtil = $_POST['batch_no_util'] ?? [];
+            
+            // Preparar datos base
+            $baseData = [
+                'tipo_documento' => $_POST['tipo_documento'],
+                'tipo_documento_id' => ($tipo = $this->tipoDocumento->findByCode($_POST['tipo_documento'])) ? $tipo['id'] : null,
+                'gestion' => $_POST['gestion'],
+                'codigo_abc' => $_POST['codigo_abc'] ?? null,
+                'contenedor_fisico_id' => !empty($_POST['contenedor_fisico_id']) ? $_POST['contenedor_fisico_id'] : null,
+                'observaciones' => $_POST['observaciones'] ?? null,
+                'fecha_creacion' => date('Y-m-d H:i:s')
+            ];
+
+            for ($i = $desde; $i <= $hasta; $i++) {
+                $docData = $baseData;
+                $docData['nro_comprobante'] = $i;
+                
+                // Determinar estado basado en checkboxes
+                $existe = isset($batchExiste[$i]); // If checked, it exists physically
+                $anulado = isset($batchAnulado[$i]);
+                $noUtil = isset($batchNoUtil[$i]);
+
+                if (!$existe) {
+                    $status = 'FALTA';
+                } elseif ($anulado) {
+                    $status = 'ANULADO';
+                } elseif ($noUtil) {
+                    $status = 'NO UTILIZADO';
+                } else {
+                    $status = 'DISPONIBLE';
+                }
+
+                $docData['estado_documento'] = $status;
+
+                // Intentar crear (ignorar errores de duplicados contando solo éxitos)
+                if ($this->documento->create($docData)) {
+                    $count++;
+                }
+            }
+            
+            \TAMEP\Core\Session::flash('success', "Se crearon $count documentos exitosamente en lote.");
+            $this->redirect('/catalogacion');
+            return;
+        }
+
+        // --- MODO INDIVIDUAL (Original) ---
+        if (empty($_POST['nro_comprobante'])) {
+            \TAMEP\Core\Session::flash('error', 'Número de comprobante obligatorio');
             $this->redirect('/catalogacion/crear');
         }
         
@@ -245,7 +320,7 @@ class CatalogacionController extends BaseController
             \TAMEP\Core\Session::flash('success', 'Documento creado exitosamente');
             $this->redirect('/catalogacion/ver/' . $id);
         } else {
-            \TAMEP\Core\Session::flash('error', 'Error al crear el documento');
+            \TAMEP\Core\Session::flash('error', 'Error al crear el documento (posible duplicado)');
             $this->redirect('/catalogacion/crear');
         }
     }
@@ -265,12 +340,14 @@ class CatalogacionController extends BaseController
         }
         
         // Obtener contenedores para el select
-        $contenedores = $this->contenedorFisico->all();
+        $contenedores = $this->contenedorFisico->buscar();
         
         $this->view('documentos.editar', [
+            'documentos' => $documento, // Wait, key is 'documento' in original but check params
             'documento' => $documento,
             'contenedores' => $contenedores,
-            'ubicaciones' => $this->ubicacion->all(), // Pass locations for filtering
+            'ubicaciones' => $this->ubicacion->all(),
+            'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
             'user' => $this->getCurrentUser()
         ]);
     }

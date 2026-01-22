@@ -30,7 +30,7 @@ class ContenedorFisico extends BaseModel
     /**
      * Buscar contenedores con filtros
      */
-    public function buscar($filtros = [], $limit = null)
+    public function buscar($filtros = [])
     {
         $sql = "SELECT c.*, u.nombre as ubicacion_nombre, t.nombre as tipo_documento_nombre, t.codigo as tipo_documento_codigo
                 FROM {$this->table} c 

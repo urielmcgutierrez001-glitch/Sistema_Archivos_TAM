@@ -590,10 +590,7 @@ function cerrarModalAsignacion() {
                         <?php if (isset($contenedores)): ?>
                             <?php foreach ($contenedores as $c): ?>
                                 <option value="<?= $c['id'] ?>">
-                                    <?= htmlspecialchars($c['tipo_documento_codigo'] ?? 'DOC') ?> <?= $c['gestion'] ?> <?= $c['tipo_contenedor'] ?> #<?= $c['numero'] ?>
-                                    <?php if (!empty($c['codigo_abc'])): ?>
-                                        (<?= htmlspecialchars($c['codigo_abc']) ?>)
-                                    <?php endif; ?>
+                                    [<?= htmlspecialchars($c['tipo_documento_codigo'] ?? '???') ?>] <?= htmlspecialchars($c['gestion']) ?> <?= htmlspecialchars($c['tipo_contenedor']) ?> #<?= htmlspecialchars($c['numero']) ?> <?= !empty($c['codigo_abc']) ? '('.htmlspecialchars($c['codigo_abc']).')' : '' ?>
                                 </option>
                             <?php endforeach; ?>
                         <?php endif; ?>
