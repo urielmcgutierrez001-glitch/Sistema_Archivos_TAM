@@ -28,10 +28,23 @@ class TipoDocumento extends BaseModel
     /**
      * Get all document types
      */
+    /**
+     * Get all document types sorted by name
+     */
     public function getAll()
     {
         return $this->db->fetchAll(
             "SELECT * FROM {$this->table} ORDER BY nombre ASC"
+        );
+    }
+
+    /**
+     * Get all document types sorted by ID
+     */
+    public function getAllOrderedById()
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM {$this->table} ORDER BY id ASC"
         );
     }
     

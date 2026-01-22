@@ -16,6 +16,7 @@ use TAMEP\Models\Usuario;
 use TAMEP\Models\PrestamoHeader;
 use TAMEP\Models\Ubicacion;
 use TAMEP\Models\UnidadArea;
+use TAMEP\Models\TipoDocumento;
 use TAMEP\Core\Session;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -29,6 +30,7 @@ class PrestamosController extends BaseController
     // private $hojaRuta;
     private $ubicacion;
     private $unidadArea;
+    private $tipoDocumento;
     
     public function __construct()
     {
@@ -41,6 +43,7 @@ class PrestamosController extends BaseController
         // $this->hojaRuta = new HojaRuta();
         $this->ubicacion = new Ubicacion();
         $this->unidadArea = new UnidadArea();
+        $this->tipoDocumento = new TipoDocumento();
     }
     
     /**
@@ -116,6 +119,7 @@ class PrestamosController extends BaseController
         $this->view('prestamos.crear', [
             'documentos' => $documentos,
             'unidades' => $unidades,
+            'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -358,6 +362,7 @@ class PrestamosController extends BaseController
         $this->view('prestamos.nuevo', [
             'documentos' => $documentos,
             'unidades' => $unidades,
+            'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
             'filtros' => [
                 'search' => $search,
                 'gestion' => $gestion,

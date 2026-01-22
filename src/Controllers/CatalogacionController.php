@@ -150,6 +150,7 @@ class CatalogacionController extends BaseController
         $this->view('documentos.index', [
             'documentos' => $documentos,
             'ubicaciones' => $ubicaciones,
+            'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
             'filtros' => [
                 'search' => $search,
                 'gestion' => $gestion,

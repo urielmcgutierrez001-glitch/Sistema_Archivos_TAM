@@ -76,15 +76,12 @@ $modoLotes = isset($_GET['modo_lotes']) && $_GET['modo_lotes'] == '1';
             <div class="form-group">
                 <label for="tipo_documento">Tipo de Documento</label>
                 <select id="tipo_documento" name="tipo_documento" class="form-control">
-                    <option value="">Todos</option>
-                    <option value="REGISTRO_DIARIO" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'REGISTRO_DIARIO' ? 'selected' : '' ?>>📋 Registro Diario</option>
-                    <option value="REGISTRO_INGRESO" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'REGISTRO_INGRESO' ? 'selected' : '' ?>>💵 Registro Ingreso</option>
-                    <option value="REGISTRO_CEPS" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'REGISTRO_CEPS' ? 'selected' : '' ?>>🏦 Registro CEPS</option>
-                    <option value="PREVENTIVOS" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'PREVENTIVOS' ? 'selected' : '' ?>>📊 Preventivos</option>
-                    <option value="ASIENTOS_MANUALES" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'ASIENTOS_MANUALES' ? 'selected' : '' ?>>✍️ Asientos Manuales</option>
-                    <option value="DIARIOS_APERTURA" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'DIARIOS_APERTURA' ? 'selected' : '' ?>>📂 Diarios de Apertura</option>
-                    <option value="REGISTRO_TRASPASO" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'REGISTRO_TRASPASO' ? 'selected' : '' ?>>🔄 Registro Traspaso</option>
-                    <option value="HOJA_RUTA_DIARIOS" <?= isset($_GET['tipo_documento']) && $_GET['tipo_documento'] === 'HOJA_RUTA_DIARIOS' ? 'selected' : '' ?>>🗺️ Hoja de Ruta - Diarios</option>
+                    <option value="">-- Todos --</option>
+                    <?php foreach ($tiposDocumento as $td): ?>
+                        <option value="<?= $td['codigo'] ?>" <?= ($filtros['tipo_documento'] ?? '') == $td['codigo'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($td['nombre']) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>
@@ -587,16 +584,22 @@ function cerrarModalAsignacion() {
             
             <div class="form-group" style="margin-bottom: 20px;">
                 <label for="contenedor_lote">Contenedor:</label>
-                <select name="contenedor_id" id="contenedor_lote" class="form-control" style="width: 100%; padding: 8px;">
-                    <option value="">-- No cambiar --</option>
-                    <?php if (isset($contenedores)): ?>
-                        <?php foreach ($contenedores as $c): ?>
-                            <option value="<?= $c['id'] ?>">
-                                <?= $c['tipo_contenedor'] ?> #<?= $c['numero'] ?> (<?= $c['gestion'] ?? '-' ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </select>
+                <div style="display:flex; gap:5px;">
+                    <select name="contenedor_id" id="contenedor_lote" class="form-control" style="width: 100%; padding: 8px;">
+                        <option value="">-- No cambiar --</option>
+                        <?php if (isset($contenedores)): ?>
+                            <?php foreach ($contenedores as $c): ?>
+                                <option value="<?= $c['id'] ?>">
+                                    <?= htmlspecialchars($c['tipo_documento_codigo'] ?? 'DOC') ?> <?= $c['gestion'] ?> <?= $c['tipo_contenedor'] ?> #<?= $c['numero'] ?>
+                                    <?php if (!empty($c['codigo_abc'])): ?>
+                                        (<?= htmlspecialchars($c['codigo_abc']) ?>)
+                                    <?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                    <button type="button" class="btn btn-success" onclick="abrirModalCrearContenedor('contenedor_lote')" title="Crear Nuevo Contenedor">➕</button>
+                </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 20px;">
@@ -621,6 +624,9 @@ function cerrarModalAsignacion() {
 <?php endif; ?>
 
 <?php 
+// Include Modal Partial
+require __DIR__ . '/../layouts/modal_crear_contenedor.php';
+
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';
 ?>

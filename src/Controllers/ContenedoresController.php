@@ -93,7 +93,7 @@ class ContenedoresController extends BaseController
             'contenedores' => $contenedores,
             'user' => $this->getCurrentUser(),
             'ubicaciones' => $this->ubicacion->getActive(),
-            'tiposDocumento' => $this->tipoDocumento->getAll(),
+            'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
             'filtros' => $filtros,
             'paginacion' => [
                 'current' => $page,
@@ -126,7 +126,8 @@ class ContenedoresController extends BaseController
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
             'color' => $_POST['color'] ?? null,
             'bloque_nivel' => $_POST['bloque_nivel'] ?? null,
-            'gestion' => $_POST['gestion'] ?? date('Y')
+            'gestion' => $_POST['gestion'] ?? date('Y'),
+            'codigo_abc' => $_POST['codigo_abc'] ?? null
         ];
         
         if ($this->contenedorFisico->create($data)) {
@@ -190,7 +191,8 @@ class ContenedoresController extends BaseController
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
             'color' => $_POST['color'] ?? null,
             'bloque_nivel' => $_POST['bloque_nivel'] ?? null,
-            'gestion' => $_POST['gestion'] ?? null
+            'gestion' => $_POST['gestion'] ?? null,
+            'codigo_abc' => $_POST['codigo_abc'] ?? null
         ];
         
         if ($this->contenedorFisico->update($id, $data)) {
@@ -243,6 +245,60 @@ class ContenedoresController extends BaseController
         $this->redirect('/contenedores');
     }
     
+    public function guardarRapido()
+    {
+        $this->requireAuth();
+        
+        // Handle JSON or Form data
+        $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+        
+        if (empty($input['tipo_contenedor']) || empty($input['numero'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Faltan datos obligatorios']);
+            exit;
+        }
+        
+        $data = [
+            'tipo_contenedor' => $input['tipo_contenedor'],
+            'tipo_documento' => $input['tipo_documento'] ?? null,
+            'numero' => $input['numero'],
+            'ubicacion_id' => !empty($input['ubicacion_id']) ? $input['ubicacion_id'] : null,
+            'color' => $input['color'] ?? null,
+            'bloque_nivel' => $input['bloque_nivel'] ?? null,
+            'gestion' => $input['gestion'] ?? date('Y'),
+            'codigo_abc' => $input['codigo_abc'] ?? null
+        ];
+        
+        $id = $this->contenedorFisico->create($data);
+        
+        header('Content-Type: application/json');
+        
+        if ($id) {
+            // Fetch name for display
+            $ubicacionNombre = '';
+            if (!empty($data['ubicacion_id'])) {
+                $ubic = $this->ubicacion->find($data['ubicacion_id']);
+                $ubicacionNombre = $ubic ? ' - ' . $ubic['nombre'] : '';
+            }
+            
+            // Format: [TIPO] #[NUM] (ABC) - [UBICACION]
+            $abc = !empty($data['codigo_abc']) ? " ({$data['codigo_abc']})" : "";
+            $displayText = "{$data['tipo_contenedor']} #{$data['numero']}{$abc}{$ubicacionNombre}";
+            
+            echo json_encode([
+                'success' => true, 
+                'data' => [
+                    'id' => $id,
+                    'text' => $displayText,
+                    'ubicacion_id' => $data['ubicacion_id']
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Error al crear contenedor en DB']);
+        }
+        exit;
+    }
+
     private function getCurrentUser()
     {
         return \TAMEP\Core\Session::user();

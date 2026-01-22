@@ -71,6 +71,7 @@ $router->get('/reportes', 'ReportesController@index', ['AuthMiddleware']);
 $router->get('/contenedores', 'ContenedoresController@index', ['AuthMiddleware']);
 $router->get('/contenedores/crear', 'ContenedoresController@crear', ['AuthMiddleware']);
 $router->post('/contenedores/guardar', 'ContenedoresController@guardar', ['AuthMiddleware']);
+$router->post('/contenedores/guardar-rapido', 'ContenedoresController@guardarRapido', ['AuthMiddleware']);
 $router->get('/contenedores/ver/{id}', 'ContenedoresController@ver', ['AuthMiddleware']);
 $router->get('/contenedores/editar/{id}', 'ContenedoresController@editar', ['AuthMiddleware']);
 $router->post('/contenedores/actualizar/{id}', 'ContenedoresController@actualizar', ['AuthMiddleware']);

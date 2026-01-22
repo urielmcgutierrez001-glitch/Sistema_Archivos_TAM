@@ -28,6 +28,11 @@ $pageTitle = 'Editar Contenedor';
                 <label for="numero">Número <span style="color:red">*</span></label>
                 <input type="number" name="numero" id="numero" class="form-control" required value="<?= htmlspecialchars($contenedor['numero']) ?>">
             </div>
+
+            <div class="form-group">
+                <label for="codigo_abc">Código ABC (Opcional)</label>
+                <input type="text" name="codigo_abc" id="codigo_abc" class="form-control" value="<?= htmlspecialchars($contenedor['codigo_abc'] ?? '') ?>">
+            </div>
         </div>
         
         <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">

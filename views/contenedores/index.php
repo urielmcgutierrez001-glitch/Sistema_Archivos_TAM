@@ -47,14 +47,11 @@ $pageTitle = 'Gestión de Contenedores';
                     <label for="tipo_documento">Tipo Documento</label>
                     <select name="tipo_documento" id="tipo_documento" class="form-control">
                         <option value="">-- Todos --</option>
-                        <option value="REGISTRO_DIARIO" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_DIARIO' ? 'selected' : '' ?>>📋 Registro Diario</option>
-                        <option value="REGISTRO_INGRESO" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_INGRESO' ? 'selected' : '' ?>>💵 Registro Ingreso</option>
-                        <option value="REGISTRO_CEPS" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_CEPS' ? 'selected' : '' ?>>🏦 Registro CEPS</option>
-                        <option value="PREVENTIVOS" <?= ($filtros['tipo_documento'] ?? '') === 'PREVENTIVOS' ? 'selected' : '' ?>>📊 Preventivos</option>
-                        <option value="ASIENTOS_MANUALES" <?= ($filtros['tipo_documento'] ?? '') === 'ASIENTOS_MANUALES' ? 'selected' : '' ?>>✍️ Asientos Manuales</option>
-                        <option value="DIARIOS_APERTURA" <?= ($filtros['tipo_documento'] ?? '') === 'DIARIOS_APERTURA' ? 'selected' : '' ?>>📂 Diarios de Apertura</option>
-                        <option value="REGISTRO_TRASPASO" <?= ($filtros['tipo_documento'] ?? '') === 'REGISTRO_TRASPASO' ? 'selected' : '' ?>>🔄 Registro Traspaso</option>
-                        <option value="HOJA_RUTA_DIARIOS" <?= ($filtros['tipo_documento'] ?? '') === 'HOJA_RUTA_DIARIOS' ? 'selected' : '' ?>>🗺️ Hoja de Ruta - Diarios</option>
+                        <?php foreach ($tiposDocumento as $td): ?>
+                            <option value="<?= $td['codigo'] ?>" <?= ($filtros['tipo_documento'] ?? '') == $td['codigo'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($td['nombre']) ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
             </div>

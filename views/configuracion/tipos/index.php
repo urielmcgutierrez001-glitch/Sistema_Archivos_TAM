@@ -46,7 +46,9 @@ $pageTitle = 'Gestión de Tipos de Documento';
                                 <a href="/configuracion/tipos/editar/<?= $tipo['id'] ?>" class="btn btn-sm btn-info" title="Editar">
                                     ✏️
                                 </a>
-                                <!-- Opcional: Eliminar solo si no tiene documentos asociados (validado en backend) -->
+                                <a href="/configuracion/tipos/eliminar/<?= $tipo['id'] ?>" class="btn btn-sm btn-danger" title="Eliminar" onclick="return confirm('¿Está seguro de que desea eliminar este tipo de documento?');">
+                                    🗑️
+                                </a>
                             </td>
                         </tr>
                         <?php endforeach; ?>

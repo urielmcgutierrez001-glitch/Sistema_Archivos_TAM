@@ -48,17 +48,23 @@ $pageTitle = 'Crear Nuevo Documento';
         <div class="form-row">
             <div class="form-group">
                 <label for="contenedor_fisico_id">Contenedor Físico (Libro/Amarro)</label>
-                <select id="contenedor_fisico_id" name="contenedor_fisico_id" class="form-control">
-                    <option value="">Sin asignar</option>
-                    <?php foreach ($contenedores as $cont): ?>
-                        <option value="<?= $cont['id'] ?>">
-                            <?= htmlspecialchars($cont['tipo_contenedor']) ?> #<?= htmlspecialchars($cont['numero']) ?>
-                            <?php if (!empty($cont['ubicacion_nombre'])): ?>
-                                - <?= htmlspecialchars($cont['ubicacion_nombre']) ?>
-                            <?php endif; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <div style="display:flex; gap:5px;">
+                    <select id="contenedor_fisico_id" name="contenedor_fisico_id" class="form-control">
+                        <option value="">Sin asignar</option>
+                        <?php foreach ($contenedores as $cont): ?>
+                            <option value="<?= $cont['id'] ?>">
+                                <?= htmlspecialchars($cont['tipo_documento_codigo'] ?? 'DOC') ?> <?= htmlspecialchars($cont['gestion']) ?> <?= htmlspecialchars($cont['tipo_contenedor']) ?> #<?= htmlspecialchars($cont['numero']) ?>
+                                <?php if (!empty($cont['codigo_abc'])): ?>
+                                    (<?= htmlspecialchars($cont['codigo_abc']) ?>)
+                                <?php endif; ?>
+                                <?php if (!empty($cont['ubicacion_nombre'])): ?>
+                                    - <?= htmlspecialchars($cont['ubicacion_nombre']) ?>
+                                <?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="btn btn-success" onclick="abrirModalCrearContenedor('contenedor_fisico_id')" title="Crear Nuevo Contenedor">➕</button>
+                </div>
             </div>
             
             <div class="form-group">
@@ -118,6 +124,9 @@ $pageTitle = 'Crear Nuevo Documento';
 </style>
 
 <?php 
+// Include Modal Partial
+require __DIR__ . '/../layouts/modal_crear_contenedor.php';
+
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';
 ?>

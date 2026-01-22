@@ -26,6 +26,7 @@
 /* Sidebar colapsado */
 .sidebar.collapsed {
     width: 70px;
+    overflow: visible; /* Permitir que los submenús floten fuera */
 }
 
 /* Toggle Button */
@@ -372,4 +373,34 @@ details summary::marker {
     .sidebar-footer {
         position: relative;
     }
+}
+
+/* Fix floating submenus for collapsed sidebar */
+.sidebar.collapsed details {
+    position: relative;
+}
+
+.sidebar.collapsed details[open] .sidebar-submenu {
+    display: block !important;
+    position: absolute;
+    left: 70px;
+    top: 0;
+    width: 200px;
+    background: #142D66; /* Mismo color que el fondo del sidebar */
+    padding: 10px 0;
+    border-radius: 0 8px 8px 0;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+.sidebar.collapsed .sidebar-submenu a {
+    justify-content: flex-start !important;
+    padding-left: 20px !important;
+    white-space: nowrap;
+}
+
+/* Highlight the active icon when menu is open */
+.sidebar.collapsed details[open] > summary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFD100;
 }

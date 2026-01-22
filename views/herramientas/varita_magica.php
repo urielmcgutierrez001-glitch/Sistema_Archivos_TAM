@@ -12,12 +12,15 @@ ob_start();
     </div>
     
     <div style="margin-top: 20px;">
-        <p>Secuencia: Pato 🦆 → Sapo 🐸 → Globo 🎈</p>
+        <p>¡Descubre todos los objetos sorpresa! 🎲</p>
     </div>
 </div>
 
 <script>
-    const objetos = ['🦆', '🐸', '🎈'];
+    const objetos = [
+        '🦆', '🐸', '🎈', '🐶', '🐱', '🐷', '🍦', '🍕', '🚀', '⭐', 
+        '👻', '👽', '🦄', '🤖', '🔥', '☀️', '🌙', '🌸', '⚽', '🧽'
+    ];
     let indice = 0;
     const container = document.getElementById('magic-container');
 
@@ -27,8 +30,13 @@ ob_start();
         container.style.opacity = '0';
         
         setTimeout(() => {
-            // Cambiar objeto
-            indice = (indice + 1) % objetos.length;
+            // Cambiar objeto aleatoriamente (asegurar que no se repita el mismo)
+            let nuevoIndice;
+            do {
+                nuevoIndice = Math.floor(Math.random() * objetos.length);
+            } while (nuevoIndice === indice);
+            
+            indice = nuevoIndice;
             container.innerHTML = objetos[indice];
             
             // Animación de aparición
@@ -39,9 +47,6 @@ ob_start();
             setTimeout(() => {
                 container.style.transform = 'scale(1)';
             }, 200);
-            
-            // Sonido opcional (comentado para no molestar si no se requiere)
-            // playSound(); 
         }, 300);
     }
 </script>
