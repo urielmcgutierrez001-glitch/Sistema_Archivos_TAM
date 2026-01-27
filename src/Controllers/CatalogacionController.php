@@ -235,14 +235,20 @@ class CatalogacionController extends BaseController
         if ($modoLote) {
             $desde = (int)($_POST['nro_desde'] ?? 0);
             $hasta = (int)($_POST['nro_hasta'] ?? 0);
+            $documentNumbers = $_POST['document_numbers'] ?? [];
             
-            if ($desde <= 0 || $hasta <= 0 || $desde > $hasta) {
-                \TAMEP\Core\Session::flash('error', 'Rango de números inválido');
+            // Validate: Either valid range OR valid list
+            if (empty($documentNumbers) && ($desde <= 0 || $hasta <= 0 || $desde > $hasta)) {
+                \TAMEP\Core\Session::flash('error', 'Rango de números inválido o lista vacía');
                 $this->redirect('/catalogacion/crear');
             }
             
-            // Limit removed per user request
-            // if (($hasta - $desde) > 100) { ... }
+            // If explicit list provided (Main source of truth now)
+            if (!empty($documentNumbers)) {
+                $numbersToProcess = $documentNumbers;
+            } else {
+                $numbersToProcess = range($desde, $hasta);
+            }
 
             $count = 0;
             
@@ -262,12 +268,13 @@ class CatalogacionController extends BaseController
                 'fecha_creacion' => date('Y-m-d H:i:s')
             ];
 
-            for ($i = $desde; $i <= $hasta; $i++) {
+            foreach ($numbersToProcess as $i) {
+                // $i is the comprobante number
                 $docData = $baseData;
                 $docData['nro_comprobante'] = $i;
                 
                 // Determinar estado basado en checkboxes
-                $existe = isset($batchExiste[$i]); // If checked, it exists physically
+                $existe = isset($batchExiste[$i]);
                 $anulado = isset($batchAnulado[$i]);
                 $noUtil = isset($batchNoUtil[$i]);
 
@@ -289,7 +296,7 @@ class CatalogacionController extends BaseController
                 }
             }
             
-            \TAMEP\Core\Session::flash('success', "Se crearon $count documentos exitosamente en lote.");
+            \TAMEP\Core\Session::flash('success', "Se procesaron " . count($numbersToProcess) . " item(s). Se crearon $count documentos exitosamente.");
             $this->redirect('/catalogacion');
             return;
         }

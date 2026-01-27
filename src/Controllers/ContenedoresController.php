@@ -121,7 +121,7 @@ class ContenedoresController extends BaseController
         
         $data = [
             'tipo_contenedor' => $_POST['tipo_contenedor'],
-            'tipo_documento' => $_POST['tipo_documento'] ?? null,
+            'tipo_documento_id' => !empty($_POST['tipo_documento']) ? $_POST['tipo_documento'] : null,
             'numero' => $_POST['numero'],
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
             'codigo_abc' => $_POST['codigo_abc'] ?? null,
@@ -187,7 +187,7 @@ class ContenedoresController extends BaseController
         
         $data = [
             'tipo_contenedor' => $_POST['tipo_contenedor'],
-            'tipo_documento' => $_POST['tipo_documento'] ?? null,
+            'tipo_documento_id' => !empty($_POST['tipo_documento']) ? $_POST['tipo_documento'] : null,
             'numero' => $_POST['numero'],
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
             'codigo_abc' => $_POST['codigo_abc'] ?? null,
@@ -261,7 +261,7 @@ class ContenedoresController extends BaseController
         
         $data = [
             'tipo_contenedor' => $input['tipo_contenedor'],
-            'tipo_documento' => $input['tipo_documento'] ?? null,
+            'tipo_documento_id' => !empty($input['tipo_documento']) ? $input['tipo_documento'] : null,
             'numero' => $input['numero'],
             'ubicacion_id' => !empty($input['ubicacion_id']) ? $input['ubicacion_id'] : null,
             'codigo_abc' => $input['codigo_abc'] ?? null,

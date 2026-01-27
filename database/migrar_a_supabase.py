@@ -31,8 +31,8 @@ MYSQL_CONFIG = {
 }
 
 # Supabase Connection String
-# postgresql://postgres:pasantiatam123@db.sdovwowdbuzjfwtgnfoa.supabase.co:5432/postgres
-SUPABASE_URI = "postgresql://postgres:pasantiatam123@db.sdovwowdbuzjfwtgnfoa.supabase.co:5432/postgres"
+# Pooler Connection (IPv4 compatible)
+SUPABASE_URI = "postgresql://postgres.sdovwowdbuzjfwtgnfoa:pasantiatam123@aws-1-us-east-1.pooler.supabase.com:6543/postgres"
 
 # Mapeo de tipos MySQL -> PostgreSQL
 TYPE_MAPPING = {
@@ -117,7 +117,8 @@ def migrate_table(table_name, mysql_conn, pg_conn):
             
             # Manejar defaults
             if col['Default'] is not None:
-                if col['Default'] == 'CURRENT_TIMESTAMP':
+                def_val = str(col['Default']).lower()
+                if 'current_timestamp' in def_val:
                     default = 'DEFAULT CURRENT_TIMESTAMP'
                 else:
                     # Basic quote handling
@@ -147,29 +148,37 @@ def migrate_table(table_name, mysql_conn, pg_conn):
             pg_cursor.execute(f'DROP TABLE IF EXISTS "{table_name}" CASCADE;')
             pg_cursor.execute(create_sql)
             
-        # 4. Leer datos de MySQL
+        # 4. Leer datos de MySQL (Raw Cursor para mayor control)
         print("   📥 Leyendo datos de MySQL...")
-        df = pd.read_sql(f"SELECT * FROM `{table_name}`", mysql_conn)
         
-        # Correcciones de tipos de datos para pandas -> postgres
-        # Replace NaN with None for SQL NULL
-        df = df.replace({np.nan: None})
+        # Lista de columnas basada en el DESCRIBE anterior para asegurar orden
+        col_names = [col['Field'] for col in columns]
         
-        # Convertir timestamps a string para evitar problemas de formato
-        for col in df.columns:
-            if pd.api.types.is_datetime64_any_dtype(df[col]):
-                df[col] = df[col].astype(object).where(df[col].notnull(), None)
-
-        data = [tuple(x) for x in df.to_numpy()]
-        
-        if not data:
+        with mysql_conn.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM `{table_name}`")
+            rows = cursor.fetchall()
+            
+        if not rows:
             print("   ⚠️  Tabla vacía, saltando inserción.")
             return
 
+        # Convertir diccionarios a tuplas ordenadas
+        data = []
+        for row in rows:
+            tup = []
+            for col in col_names:
+                val = row[col]
+                # Limpieza básica de tipos
+                if isinstance(val, (pd.Timestamp, datetime)):
+                     val = str(val) # Convertir a string para evitar problemas de timezone/formato
+                tup.append(val)
+            data.append(tuple(tup))
+
         # 5. Insertar en Postgres
         print(f"   📤 Insertando {len(data)} registros en Postgres...")
-        columns_list = ', '.join([f'"{c}"' for c in df.columns])
-        placeholders = ', '.join(['%s'] * len(df.columns))
+        
+        columns_list = ', '.join([f'"{c}"' for c in col_names])
+        placeholders = ', '.join(['%s'] * len(col_names))
         insert_sql = f'INSERT INTO "{table_name}" ({columns_list}) VALUES ({placeholders})'
         
         with pg_conn.cursor() as pg_cursor:

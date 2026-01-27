@@ -22,7 +22,7 @@ $pageTitle = 'Crear Nuevo Documento';
         <div class="form-row">
             <div class="form-group">
                 <label for="tipo_documento">Tipo de Documento <span class="required">*</span></label>
-                <select id="tipo_documento" name="tipo_documento" class="form-control" required>
+                <select id="tipo_documento" name="tipo_documento" class="form-control" required onchange="filtrarContenedores()">
                     <option value="">Seleccione...</option>
                     <?php if (isset($tiposDocumento)): ?>
                         <?php foreach ($tiposDocumento as $td): ?>
@@ -82,10 +82,13 @@ $pageTitle = 'Crear Nuevo Documento';
             
              <div class="form-group">
                 <label for="codigo_abc_batch">Código ABC (Opcional, se aplicará a todos)</label>
-                <input type="text" id="codigo_abc_batch" name="codigo_abc" class="form-control" disabled> <!-- Disabled initially, logic relies on same name if single form submit, but here we might duplicate name? JS will handle enabling/disabling -->
+                <input type="text" id="codigo_abc_batch" name="codigo_abc" class="form-control" disabled>
             </div>
 
             <button type="button" class="btn btn-purple btn-block" onclick="generarLista()" style="background-color: #6f42c1; color: white;">Generar Lista de Documentos</button>
+            <div style="text-align: right; margin-top: 10px;">
+                <button type="button" class="btn btn-info btn-sm" onclick="agregarDocumentoManual()">➕ Adicionar Documento a la Lista</button>
+            </div>
             
             <!-- List Container -->
             <div id="batch-list-container" style="margin-top: 20px; max-height: 500px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #dee2e6;">
@@ -100,8 +103,8 @@ $pageTitle = 'Crear Nuevo Documento';
                     <select id="contenedor_fisico_id" name="contenedor_fisico_id" class="form-control">
                         <option value="">Sin asignar</option>
                         <?php foreach ($contenedores as $cont): ?>
-                            <option value="<?= $cont['id'] ?>">
-                                <?= htmlspecialchars($cont['tipo_documento_abreviatura'] ?? $cont['tipo_documento_codigo'] ?? 'DOC') ?> <?= htmlspecialchars($cont['gestion']) ?> <?= htmlspecialchars($cont['tipo_contenedor']) ?> #<?= htmlspecialchars($cont['numero']) ?>
+                            <option value="<?= $cont['id'] ?>" data-tipo-doc="<?= htmlspecialchars($cont['tipo_documento_codigo'] ?? '') ?>">
+                                <?= htmlspecialchars($cont['tipo_documento_abreviatura'] ?? $cont['tipo_documento_codigo'] ?? 'DOC') ?> <?= htmlspecialchars($cont['gestion'] ?? '') ?> <?= htmlspecialchars($cont['tipo_contenedor'] ?? '') ?> #<?= htmlspecialchars($cont['numero'] ?? '') ?>
                                 <?php if (!empty($cont['codigo_abc'])): ?>
                                     (<?= htmlspecialchars($cont['codigo_abc']) ?>)
                                 <?php endif; ?>
@@ -171,49 +174,112 @@ function generarLista() {
     const desde = parseInt(document.getElementById('nro_desde').value);
     const hasta = parseInt(document.getElementById('nro_hasta').value);
     
+    // Get Selected Type Name
+    const tipoSelect = document.getElementById('tipo_documento');
+    const tipoName = tipoSelect.options[tipoSelect.selectedIndex].text.trim() || 'Documento';
+
     if (isNaN(desde) || isNaN(hasta) || desde > hasta) {
         alert('Por favor ingrese un rango válido (Desde debe ser menor o igual a Hasta)');
         return;
     }
     
-    // Limit removed per user request
-    /* if ((hasta - desde) > 100) {
-        alert('El rango no puede exceder 100 documentos por seguridad.');
-        return;
-    } */
-
     listContainer.innerHTML = '';
     
     for (let i = desde; i <= hasta; i++) {
-        const item = document.createElement('div');
-        item.className = 'batch-item';
-        // Using radio buttons with same name per item to ensure single selection for status
-        // But requested UI is checkboxes. I'll make them behave like radios or just standard mapping.
-        // Requested: Checked "Existe" default. "Anulado", "No utilizado".
+        agregarItemLista(i, tipoName);
+    }
+}
+
+function agregarDocumentoManual() {
+    const nro = prompt("Ingrese el número del documento a adicionar:");
+    if (!nro) return;
+    
+    const numero = parseInt(nro);
+    if (isNaN(numero)) {
+        alert("Número inválido");
+        return;
+    }
+
+    // Check availability (simple visual check, backend does real check)
+    // Check if valid range
+    
+    const tipoSelect = document.getElementById('tipo_documento');
+    const tipoName = tipoSelect.options[tipoSelect.selectedIndex].text.trim() || 'Documento';
+    
+    agregarItemLista(numero, tipoName);
+}
+
+function agregarItemLista(numero, tipoName) {
+    const listContainer = document.getElementById('batch-list-container');
+    
+    // Check duplicates in list
+    if (document.getElementById(`batch_item_${numero}`)) {
+        alert(`El documento ${numero} ya está en la lista.`);
+        return;
+    }
+
+    const item = document.createElement('div');
+    item.className = 'batch-item';
+    item.id = `batch_item_${numero}`;
+    
+    // Hidden input for the number to ensure controller knows exactly which numbers to process
+    // This allows arbitrary lists
+    
+    item.innerHTML = `
+        <input type="hidden" name="document_numbers[]" value="${numero}">
+        <div style="font-weight: bold; margin-bottom: 5px; display:flex; justify-content:space-between;">
+            <span>${tipoName} ${numero}</span>
+            <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.batch-item').remove()" title="Quitar">🗑️</button>
+        </div>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" name="batch_existe[${numero}]" value="1" checked> 
+                ✅ Existe físicamente
+            </label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" name="batch_anulado[${numero}]" value="1"> 
+                🚫 Anulado
+            </label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                <input type="checkbox" name="batch_no_util[${numero}]" value="1"> 
+                ⚪ No utilizado
+            </label>
+        </div>
+    `;
+    listContainer.appendChild(item);
+}
+
+function filtrarContenedores() {
+    const tipoDoc = document.getElementById('tipo_documento').value;
+    const select = document.getElementById('contenedor_fisico_id');
+    const options = select.options;
+    
+    let count = 0;
+    
+    for (let i = 0; i < options.length; i++) {
+        const opt = options[i];
+        if (opt.value === "") continue; // Always show default
         
-        item.innerHTML = `
-            <div style="font-weight: bold; margin-bottom: 5px;">Documento ${i}</div>
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    <input type="checkbox" name="batch_existe[${i}]" value="1" checked> 
-                    ✅ Existe físicamente
-                </label>
-                <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    <input type="checkbox" name="batch_anulado[${i}]" value="1"> 
-                    🚫 Anulado
-                </label>
-                <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    <input type="checkbox" name="batch_no_util[${i}]" value="1"> 
-                    ⚪ No utilizado
-                </label>
-            </div>
-        `;
-        listContainer.appendChild(item);
+        const optType = opt.getAttribute('data-tipo-doc');
+        
+        // Show if types match OR if container has no type assigned (generic) OR if no type selected
+        if (!tipoDoc || !optType || optType === tipoDoc) {
+            opt.style.display = "";
+            count++;
+        } else {
+            opt.style.display = "none";
+        }
+    }
+    
+    // Reset selection if hidden
+    const currentOpt = options[select.selectedIndex];
+    if (currentOpt.style.display === "none") {
+        select.value = "";
     }
 }
 
 function updateRowColor(radio) {
-    // Optional: Visual feedback
+    // Optional
 }
 </script>
 
