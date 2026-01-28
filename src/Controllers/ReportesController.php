@@ -35,6 +35,7 @@ class ReportesController extends BaseController
         $this->requireAuth();
         
         // SECCIÓN 1: Préstamos Activos
+        // SECCIÓN 1: Préstamos Activos
         $sql = "SELECT p.id,
                        p.documento_tipo,
                        p.documento_id,
@@ -47,17 +48,19 @@ class ReportesController extends BaseController
                        p.estado,
                        u.nombre_completo as usuario_nombre,
                        u.username,
-                       rd.tipo_documento,
+                       COALESCE(td.codigo, td.nombre) as tipo_documento,
                        rd.gestion,
                        rd.nro_comprobante,
                        rd.codigo_abc,
-                       cf.tipo_contenedor,
+                       tc.codigo as tipo_contenedor,
                        cf.numero as contenedor_numero,
                        DATEDIFF(p.fecha_devolucion_esperada, CURDATE()) as dias_restantes
                 FROM prestamos p
                 INNER JOIN usuarios u ON p.usuario_id = u.id
                 INNER JOIN documentos rd ON p.documento_id = rd.id
+                LEFT JOIN tipo_documento td ON rd.tipo_documento_id = td.id
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
                 WHERE p.estado = 'Prestado'
                 ORDER BY p.fecha_devolucion_esperada ASC";
         
@@ -65,23 +68,28 @@ class ReportesController extends BaseController
         
         // SECCIÓN 2: Documentos No Disponibles
         $sqlNoDisponibles = "SELECT rd.*,
-                                    cf.tipo_contenedor,
+                                    COALESCE(td.codigo, td.nombre) as tipo_documento,
+                                    tc.codigo as tipo_contenedor,
                                     cf.numero as contenedor_numero,
+                                    e.nombre as estado_documento,
                                     CASE 
-                                        WHEN rd.estado_documento = 'PRESTADO' THEN p.usuario_id
+                                        WHEN e.nombre = 'PRESTADO' THEN p.usuario_id
                                         ELSE NULL
                                     END as prestado_a_usuario_id,
                                     CASE 
-                                        WHEN rd.estado_documento = 'PRESTADO' THEN u.nombre_completo
+                                        WHEN e.nombre = 'PRESTADO' THEN u.nombre_completo
                                         ELSE NULL
                                     END as prestado_a_usuario
                             FROM documentos rd
+                            LEFT JOIN tipo_documento td ON rd.tipo_documento_id = td.id
                             LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                            LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
+                            LEFT JOIN estados e ON rd.estado_documento_id = e.id
                             LEFT JOIN prestamos p ON rd.id = p.documento_id AND p.estado = 'Prestado'
                             LEFT JOIN usuarios u ON p.usuario_id = u.id
-                            WHERE rd.estado_documento IN ('FALTA', 'ANULADO', 'PRESTADO')
+                            WHERE e.nombre IN ('FALTA', 'ANULADO', 'PRESTADO')
                             ORDER BY 
-                                FIELD(rd.estado_documento, 'FALTA', 'PRESTADO', 'ANULADO'),
+                                FIELD(e.nombre, 'FALTA', 'PRESTADO', 'ANULADO'),
                                 rd.gestion DESC,
                                 rd.nro_comprobante DESC";
         

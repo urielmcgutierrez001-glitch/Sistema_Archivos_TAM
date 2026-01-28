@@ -80,7 +80,7 @@ class UsuariosController extends BaseController
         $user = Session::user();
         if ($user['rol'] !== 'Administrador') {
             Session::flash('error', 'No tiene permisos para acceder a esta sección');
-            $this->redirect('/dashboard');
+            $this->redirect('/inicio');
         }
     }
     

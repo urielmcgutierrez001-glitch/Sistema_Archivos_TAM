@@ -32,7 +32,7 @@ class HerramientasController extends BaseController
         // Verificar restricción de usuario (case insensitive)
         if (strtoupper($user['username']) !== 'VIVI') {
             \TAMEP\Core\Session::flash('error', 'No tienes permiso para ver esta magia ✨');
-            $this->redirect('/dashboard');
+            $this->redirect('/inicio');
         }
         
         $this->view('herramientas.varita_magica', [

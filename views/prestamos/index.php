@@ -92,31 +92,36 @@ $pageTitle = 'Gestión de Préstamos';
                                 </div>
                             </td>
                             <td class="text-center align-middle">
-                                <?php if ($pres['estado'] === 'Prestado'): ?>
+                                <?php if ($pres['estado'] === 'En Proceso'): ?>
+                                    <span class="badge badge-warning" style="font-weight: 500; letter-spacing: 0.5px;">⚠️ Por Procesar</span>
+                                <?php elseif ($pres['estado'] === 'Prestado'): ?>
                                     <span class="badge badge-prestado" style="font-weight: 500; letter-spacing: 0.5px;">📥 Prestado</span>
                                 <?php else: ?>
                                     <span class="badge badge-disponible" style="font-weight: 500; letter-spacing: 0.5px;">✅ Devuelto</span>
                                 <?php endif; ?>
                             </td>
                             <td class="text-center align-middle">
-                                    <?php if ($pres['estado'] == 'En Proceso'): ?>
-                                        <a href="/prestamos/procesar/<?= $pres['id'] ?>" class="btn btn-sm btn-outline-warning" title="Procesar" style="border: 1px solid #ced4da;">
-                                            ⚙️ Procesar
+                                <div style="display: flex; gap: 5px; justify-content: center;">
+                                    <a href="/prestamos/ver/<?= $pres['id'] ?>" class="btn btn-sm btn-primary" title="Ver Detalle">
+                                        Ver
+                                    </a>
+                                    
+                                    <?php if ($pres['estado'] == 'En Proceso' || $pres['estado'] == 'Prestado'): ?>
+                                        <a href="/prestamos/procesar/<?= $pres['id'] ?>" class="btn btn-sm btn-edit-custom" title="Editar">
+                                            ✏️ Editar
                                         </a>
                                     <?php else: ?>
-                                        <button class="btn btn-sm btn-outline-secondary" disabled style="border: 1px solid #ced4da; opacity: 0.5; cursor: not-allowed;" title="Ya procesado">
-                                            ⚙️ Procesar
+                                        <button class="btn btn-sm btn-edit-custom" disabled style="opacity: 0.5; cursor: not-allowed;" title="Ya procesado">
+                                            ✏️ Editar
                                         </button>
                                     <?php endif; ?>
                                     
-                                    <a href="/prestamos/ver/<?= $pres['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver Detalle" style="border: 1px solid #ced4da;">
-                                        👁️ Ver
-                                    </a>
-                                    <a href="/prestamos/exportar-pdf/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="PDF" style="border: 1px solid #ced4da;">
+                                    <button onclick="confirmarEliminacion(<?= $pres['id'] ?>)" class="btn btn-sm btn-danger" title="Eliminar">
+                                        🗑️
+                                    </button>
+                                    
+                                    <a href="/prestamos/exportar-pdf/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="PDF">
                                         📄 PDF
-                                    </a>
-                                    <a href="/prestamos/exportar-excel/<?= $pres['id'] ?>" target="_blank" class="btn btn-sm btn-outline-success" title="Excel" style="border: 1px solid #ced4da;">
-                                        📊 Excel
                                     </a>
                                 </div>
                             </td>
@@ -128,7 +133,34 @@ $pageTitle = 'Gestión de Préstamos';
     </div>
 </div>
 
+</style>
+
 <style>
+/* Custom Button Styles for Prestamos */
+.btn-edit-custom {
+    background-color: #6c757d; /* Plomo/Gris default */
+    border-color: #6c757d;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-edit-custom:hover:not(:disabled) {
+    background-color: #ffc107; /* Amarillo on hover */
+    border-color: #ffc107;
+    color: #212529; /* Texto oscuro */
+}
+
+/* Fix flex alignment for buttons */
+.btn-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px; /* Fixed height for consistency */
+    padding: 0 10px;
+    vertical-align: middle;
+    line-height: normal; /* Override bootstrap */
+}
+
 .row-vencido {
     background-color: #fff5f5;
 }
@@ -142,6 +174,12 @@ $pageTitle = 'Gestión de Préstamos';
 function confirmarDevolucion(id) {
     if (confirm('¿Confirmar la devolución de este documento?\n\nSe actualizará el estado del documento a DISPONIBLE.')) {
         window.location.href = '/prestamos/devolver/' + id;
+    }
+}
+
+function confirmarEliminacion(id) {
+    if (confirm('¿Está seguro de eliminar este préstamo?\n\nSe eliminará el registro y los documentos se liberarán (volverán a DISPONIBLE).')) {
+        window.location.href = '/prestamos/eliminar/' + id;
     }
 }
 </script>

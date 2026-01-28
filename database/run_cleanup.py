@@ -16,7 +16,7 @@ def run_sql_file(filename):
         cursor.execute(sql_content)
         conn.commit()
         
-        print("✅ Script executed successfully.")
+        print("✅ Cleanup executed successfully.")
         conn.close()
         
     except Exception as e:
@@ -26,5 +26,5 @@ def run_sql_file(filename):
 
 if __name__ == "__main__":
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    sql_file = os.path.join(base_dir, "normalization_final.sql")
+    sql_file = os.path.join(base_dir, "cleanup_redundancies.sql")
     run_sql_file(sql_file)

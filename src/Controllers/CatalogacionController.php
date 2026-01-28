@@ -288,7 +288,11 @@ class CatalogacionController extends BaseController
                     $status = 'DISPONIBLE';
                 }
 
-                $docData['estado_documento'] = $status;
+                $docData['estado_documento_id'] = $this->documento->getEstadoId($status);
+                // Ensure legacy columns are removed from insert data
+                unset($docData['tipo_documento']);
+                unset($docData['estado_documento']);
+
 
                 // Intentar crear (ignorar errores de duplicados contando solo éxitos)
                 if ($this->documento->create($docData)) {
@@ -309,13 +313,13 @@ class CatalogacionController extends BaseController
         
         // Preparar datos
         $data = [
-            'tipo_documento' => $_POST['tipo_documento'],
+            // 'tipo_documento' => $_POST['tipo_documento'], // Legacy column removed
             'tipo_documento_id' => ($tipo = $this->tipoDocumento->findByCode($_POST['tipo_documento'])) ? $tipo['id'] : null,
             'gestion' => $_POST['gestion'],
             'nro_comprobante' => $_POST['nro_comprobante'],
             'codigo_abc' => $_POST['codigo_abc'] ?? null,
             'contenedor_fisico_id' => !empty($_POST['contenedor_fisico_id']) ? $_POST['contenedor_fisico_id'] : null,
-            'estado_documento' => $_POST['estado_documento'] ?? 'DISPONIBLE',
+            'estado_documento_id' => $this->documento->getEstadoId($_POST['estado_documento'] ?? 'DISPONIBLE'),
             'observaciones' => $_POST['observaciones'] ?? null,
             'fecha_creacion' => date('Y-m-d H:i:s')
         ];
@@ -375,13 +379,13 @@ class CatalogacionController extends BaseController
         
         // Preparar datos
         $data = [
-            'tipo_documento' => $_POST['tipo_documento'],
+            // 'tipo_documento' => $_POST['tipo_documento'], // Legacy
             'tipo_documento_id' => ($tipo = $this->tipoDocumento->findByCode($_POST['tipo_documento'])) ? $tipo['id'] : null,
             'gestion' => $_POST['gestion'],
             'nro_comprobante' => $_POST['nro_comprobante'],
             'codigo_abc' => $_POST['codigo_abc'] ?? null,
             'contenedor_fisico_id' => !empty($_POST['contenedor_fisico_id']) ? $_POST['contenedor_fisico_id'] : null,
-            'estado_documento' => $_POST['estado_documento'] ?? 'DISPONIBLE',
+            'estado_documento_id' => $this->documento->getEstadoId($_POST['estado_documento'] ?? 'DISPONIBLE'),
             'observaciones' => $_POST['observaciones'] ?? null
         ];
         
@@ -458,7 +462,7 @@ class CatalogacionController extends BaseController
             $updateData['contenedor_fisico_id'] = $contenedor_id;
         }
         if (!empty($estado_documento)) {
-            $updateData['estado_documento'] = $estado_documento;
+            $updateData['estado_documento_id'] = $this->documento->getEstadoId($estado_documento);
         }
 
         $count = 0;
@@ -472,7 +476,7 @@ class CatalogacionController extends BaseController
         if (count($updateData) > 0) {
             $changes = [];
             if(isset($updateData['contenedor_fisico_id'])) $changes[] = "Contenedor";
-            if(isset($updateData['estado_documento'])) $changes[] = "Estado";
+            if(isset($updateData['estado_documento_id'])) $changes[] = "Estado";
             $msg .= " (" . implode(', ', $changes) . ")";
         } 
         

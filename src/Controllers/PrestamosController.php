@@ -176,7 +176,8 @@ class PrestamosController extends BaseController
             
             if ($id) {
                 // Actualizar estado del documento
-                // $this->documento->update($_POST['documento_id'], ['estado_documento' => 'PRESTADO']);
+                $estadoId = $this->documento->getEstadoId('PRESTADO');
+                $this->documento->update($_POST['documento_id'], ['estado_documento_id' => $estadoId]);
                 
                 Session::flash('success', 'Préstamo registrado exitosamente');
                 $this->redirect('/prestamos');
@@ -206,7 +207,7 @@ class PrestamosController extends BaseController
 
         // 2. Filtros
         $hasFilters = isset($_GET['search']) || isset($_GET['gestion']) || isset($_GET['tipo_documento']) ||
-                      isset($_GET['sort']) || isset($_GET['per_page']);
+                      isset($_GET['sort']) || isset($_GET['order']) || isset($_GET['per_page']);
 
         if ($hasFilters) {
             $_SESSION['prestamos_nuevo_filters'] = [
@@ -279,6 +280,7 @@ class PrestamosController extends BaseController
                 $sqlCount = "SELECT COUNT(*) as total FROM registro_hojas_ruta hr 
                              LEFT JOIN contenedores_fisicos cf ON hr.contenedor_fisico_id = cf.id 
                              LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id 
+                             LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
                              {$whereClause}";
                 $resCount = $this->hojaRuta->getDb()->fetchOne($sqlCount, $params);
                 $total = $resCount['total'] ?? 0;
@@ -286,10 +288,11 @@ class PrestamosController extends BaseController
                 // Data
                 $sql = "SELECT hr.id, hr.gestion, hr.nro_comprobante_diario as nro_comprobante, hr.nro_hoja_ruta,
                                hr.rubro, hr.interesado, 'HOJA_RUTA_DIARIOS' as tipo_documento,
-                               cf.tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica
+                               tc.codigo as tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica
                         FROM registro_hojas_ruta hr
                         LEFT JOIN contenedores_fisicos cf ON hr.contenedor_fisico_id = cf.id
                         LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
+                        LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
                         {$whereClause}
                         ORDER BY {$orderBy}
                         LIMIT {$limit} OFFSET {$offset}";
@@ -298,7 +301,7 @@ class PrestamosController extends BaseController
 
             } else {
                 // Documentos comunes
-                $where = ["rd.estado_documento IN ('DISPONIBLE', 'NO UTILIZADO', 'ANULADO', 'FALTA', 'PRESTADO')"];
+                $where = ["rd.estado_documento_id IN (SELECT id FROM estados WHERE nombre IN ('DISPONIBLE', 'NO UTILIZADO', 'ANULADO', 'FALTA', 'PRESTADO'))"];
                 $params = [];
                 
                 if (!empty($search)) {
@@ -319,7 +322,7 @@ class PrestamosController extends BaseController
                 }
                 
                 if (!empty($tipo_documento)) {
-                    $where[] = "rd.tipo_documento = ?";
+                    $where[] = "t.codigo = ?";
                     $params[] = $tipo_documento;
                 }
                 
@@ -333,7 +336,7 @@ class PrestamosController extends BaseController
                      else $orderBy = "CAST(rd.nro_comprobante AS UNSIGNED) DESC, rd.nro_comprobante DESC";
                 }
                 if ($sort === 'ubicacion') $orderBy = "ub.nombre $orderDir";
-                if ($sort === 'estado') $orderBy = "rd.estado_documento $orderDir";
+                if ($sort === 'estado') $orderBy = "e.nombre $orderDir";
 
                 // Count
                 $sqlCount = "SELECT COUNT(*) as total FROM documentos rd 
@@ -344,10 +347,15 @@ class PrestamosController extends BaseController
                 $total = $resCount['total'] ?? 0;
 
                 // Data
-                $sql = "SELECT rd.*, cf.tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica
+                $sql = "SELECT rd.*, tc.codigo as tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica,
+                               e.nombre as estado_documento,
+                               t.codigo as tipo_documento
                         FROM documentos rd
                         LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
                         LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
+                        LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
+                        LEFT JOIN estados e ON rd.estado_documento_id = e.id
+                        LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
                         {$whereClause}
                         ORDER BY {$orderBy}
                         LIMIT {$limit} OFFSET {$offset}";
@@ -453,10 +461,6 @@ class PrestamosController extends BaseController
                 'encabezado_id' => $headerId,
                 'documento_id' => $docId,
                 'contenedor_fisico_id' => $documento['contenedor_fisico_id'] ?? null,
-                'usuario_id' => $_POST['unidad_area_id'], // Note: This field in detail is technically 'usuario_id' but usually refers to user who registered OR borrower. In `guardar` simpler method it was used as unit? Let's keep consistency with previous code: `usuario_id` => $_POST['usuario_id'] which was missing in previous method, actually previous code used `$_POST['usuario_id']` which was undefined in `guardarMultiple` form! 
-                // Ah, looking at previous code: `usuario_id` => $_POST['usuario_id'] ?? Session::user()['id']? 
-                // In `guardarMultiple` original code, `usuario_id` was NOT in the form. It likely failed or used null. 
-                // Let's use Session user ID as the registrant.
                 'usuario_id' => Session::user()['id'],
                 'fecha_prestamo' => $fechaPrestamo,
                 'fecha_devolucion_esperada' => $fechaDevolucion,
@@ -470,7 +474,8 @@ class PrestamosController extends BaseController
             if ($id) {
                 // Actualizar estado del documento
                 if ($detailState === 'Prestado') {
-                    $this->documento->update($docId, ['estado_documento' => 'PRESTADO']);
+                    $estadoId = $this->documento->getEstadoId('PRESTADO');
+                    $this->documento->update($docId, ['estado_documento_id' => $estadoId]);
                 }
                 // Si es 'Devuelto', no cambiamos estado o lo dejamos/volvemos a 'DISPONIBLE'?
                 // Si es histórico y ya devuelto, el documento debería estar DISPONIBLE (o lo que sea actual).
@@ -539,8 +544,7 @@ class PrestamosController extends BaseController
                 // But $det should already have joined data.
                 // Wait, getDetalles might need to join document status to be sure?
                 // Usually getDetalles just gets prestamos table.
-                // Let's assume getDetalles joins documents table too?  Need to check Model...
-                // Assuming it does or we can add it. 
+                // Let's assume it does or we can add it. 
                 // For now, let's just group them.
                 $noPrestados[] = $det;
             }
@@ -669,9 +673,13 @@ class PrestamosController extends BaseController
         
         $detalles = $this->prestamoHeader->getDetalles($id);
         
+        // Get available documents for adding new ones
+        $disponibles = $this->documento->getAvailable();
+        
         $this->view('prestamos.procesar', [
             'prestamo' => $prestamo,
             'detalles' => $detalles,
+            'disponibles' => $disponibles,
             'user' => $this->getCurrentUser()
         ]);
     }
@@ -720,7 +728,8 @@ class PrestamosController extends BaseController
                     }
                 }
                 
-                $updateData = array_merge(['estado_documento' => 'PRESTADO'], $obsData);
+                $estadoId = $this->documento->getEstadoId('PRESTADO');
+                $updateData = array_merge(['estado_documento_id' => $estadoId], $obsData);
                 $this->documento->update($doc['documento_id'], $updateData);
                 
             } else {
@@ -936,24 +945,143 @@ class PrestamosController extends BaseController
         // Update Header Status
         $newDetalles = $this->prestamoHeader->getDetalles($encabezado_id);
         $allReturned = true;
-        foreach ($newDetalles as $d) {
-            if ($d['estado'] === 'Prestado') {
-                $allReturned = false;
-                break;
+        if ($allReturned) {
+            $this->prestamoHeader->update($encabezado_id, ['estado' => 'Devuelto']);
+        } else {
+            // Check if any is 'Prestado'
+            $anyPrestado = false;
+            foreach ($newDetalles as $d) {
+                if ($d['estado'] === 'Prestado') {
+                    $anyPrestado = true;
+                    break;
+                }
+            }
+            if ($anyPrestado) {
+                $this->prestamoHeader->update($encabezado_id, ['estado' => 'Prestado']);
             }
         }
         
-        $this->prestamoHeader->update($encabezado_id, [
-            'estado' => $allReturned ? 'Devuelto' : 'Prestado'
-        ]);
-
-        if ($changes > 0) {
-            $msg = $action === 'devolver' ? 'Documentos devueltos correctamente' : 'Devoluciones revertidas correctamente';
-            Session::flash('success', $msg);
-        } else {
-            Session::flash('info', 'No se realizaron cambios (verifique su selección)');
-        }
-        
+        Session::flash('success', "Se actualizaron $changes documentos.");
         $this->redirect('/prestamos/ver/' . $encabezado_id);
     }
+
+    /**
+     * Eliminar Préstamo (Encabezado y Detalles)
+     */
+    public function eliminar($id)
+    {
+        $this->requireAuth();
+        
+        // 1. Verificar existencia
+        $sql = "SELECT * FROM prestamos_encabezados WHERE id = ?";
+        $header = $this->prestamoHeader->getDb()->fetchOne($sql, [$id]);
+        
+        if (!$header) {
+            Session::flash('error', 'Préstamo no encontrado');
+            $this->redirect('/prestamos');
+        }
+        
+        // 2. Liberar documentos (si estaban prestados)
+        $detalles = $this->prestamoHeader->getDetalles($id);
+        foreach ($detalles as $doc) {
+            // Si el documento estaba marcado como PRESTADO, liberarlo a DISPONIBLE
+            // O restaurar estado anterior? Asumimos DISPONIBLE para limpieza.
+            // Solo si el documento tiene estado 'PRESTADO' actualmente en la tabla documentos
+            
+            $currDoc = $this->documento->find($doc['documento_id']);
+            if ($currDoc && $currDoc['estado_documento'] === 'PRESTADO') {
+                $this->documento->update($doc['documento_id'], ['estado_documento_id' => $this->documento->getEstadoId('DISPONIBLE')]);
+            }
+        }
+        
+        // 3. Eliminar detalles
+        $this->prestamoHeader->getDb()->query("DELETE FROM prestamos WHERE encabezado_id = ?", [$id]);
+        
+        // 4. Eliminar encabezado
+        $this->prestamoHeader->delete($id);
+        
+        Session::flash('success', 'Préstamo eliminado y documentos liberados.');
+        $this->redirect('/prestamos');
+    }
+
+    /**
+     * Agregar Documento a Préstamo (AJAX o POST)
+     */
+    public function agregarDetalle()
+    {
+        $this->requireAuth();
+        
+        $encabezado_id = $_POST['encabezado_id'] ?? null;
+        $documento_id = $_POST['documento_id'] ?? null;
+        
+        if (!$encabezado_id || !$documento_id) {
+            Session::flash('error', 'Datos incompletos');
+            $this->redirect('/prestamos/procesar/' . $encabezado_id); // Redirect back to edit
+        }
+
+        // Verificar documento
+        $doc = $this->documento->find($documento_id);
+        if (!$doc || !in_array($doc['estado_documento'], ['DISPONIBLE', 'NO UTILIZADO', 'ANULADO'])) {
+             Session::flash('error', 'El documento no está disponible');
+             $this->redirect('/prestamos/procesar/' . $encabezado_id);
+        }
+        
+        // Obtener header para fechas
+        $header = $this->prestamoHeader->getDb()->fetchOne("SELECT * FROM prestamos_encabezados WHERE id = ?", [$encabezado_id]);
+        
+        $data = [
+            'encabezado_id' => $encabezado_id,
+            'documento_id' => $documento_id,
+            'contenedor_fisico_id' => $doc['contenedor_fisico_id'] ?? null,
+            'usuario_id' => Session::user()['id'],
+            'fecha_prestamo' => $header['fecha_prestamo'],
+            'fecha_devolucion_esperada' => $header['fecha_devolucion_esperada'],
+            'estado' => 'En Proceso'
+        ];
+        
+        if ($this->prestamo->create($data)) {
+            // Update doc status? Only if header is already Prestado?
+            // If header is 'En Proceso', we leave doc as available until processed?
+            // User implies strict Checking.
+            // If header is 'Prestado', adding a doc should probably mark it prestado immediately?
+            // The user said "al editar... permite cotejar... quitar o adicionar".
+            // It suggests we add it to the list to BE Checking.
+            Session::flash('success', 'Documento agregado');
+        } else {
+            Session::flash('error', 'Error al agregar documento');
+        }
+        
+        $this->redirect('/prestamos/procesar/' . $encabezado_id);
+    }
+    
+    /**
+     * Quitar Documento de Préstamo
+     */
+    public function quitarDetalle($detalle_id)
+    {
+        $this->requireAuth();
+        
+        // Get detalle info
+        $sql = "SELECT * FROM prestamos WHERE id = ?";
+        $detalle = $this->prestamoHeader->getDb()->fetchOne($sql, [$detalle_id]);
+        
+        if (!$detalle) {
+            Session::flash('error', 'Detalle no encontrado');
+            $this->redirect('/prestamos');
+        }
+        
+        $encabezado_id = $detalle['encabezado_id'];
+        
+        // Liberar documento si estaba prestado
+        if ($detalle['estado'] === 'Prestado') {
+            $this->documento->update($detalle['documento_id'], ['estado_documento_id' => $this->documento->getEstadoId('DISPONIBLE')]);
+        }
+        
+        // Eliminar fila
+        $this->prestamoHeader->getDb()->query("DELETE FROM prestamos WHERE id = ?", [$detalle_id]);
+        
+        Session::flash('success', 'Documento eliminado del préstamo');
+        $this->redirect('/prestamos/procesar/' . $encabezado_id);
+    }
+
 }

@@ -16,7 +16,7 @@ class ContenedorFisico extends BaseModel
      */
     public function getLibros($limit = null)
     {
-        return $this->where("tipo_contenedor = 'LIBRO'", [],  $limit);
+        return $this->where("tipo_contenedor_id = (SELECT id FROM tipos_contenedor WHERE codigo = 'LIBRO')", [],  $limit);
     }
     
     /**
@@ -24,7 +24,7 @@ class ContenedorFisico extends BaseModel
      */
     public function getAmarros($limit = null)
     {
-        return $this->where("tipo_contenedor = 'AMARRO'", [], $limit);
+        return $this->where("tipo_contenedor_id = (SELECT id FROM tipos_contenedor WHERE codigo = 'AMARRO')", [], $limit);
     }
 
     /**
@@ -32,10 +32,12 @@ class ContenedorFisico extends BaseModel
      */
     public function buscar($filtros = [])
     {
-        $sql = "SELECT c.*, u.nombre as ubicacion_nombre, t.nombre as tipo_documento_nombre, t.codigo as tipo_documento_codigo
+        $sql = "SELECT c.*, u.nombre as ubicacion_nombre, t.nombre as tipo_documento_nombre, t.codigo as tipo_documento_codigo, t.codigo as tipo_documento,
+                       tc.codigo as tipo_contenedor
                 FROM {$this->table} c 
                 LEFT JOIN ubicaciones u ON c.ubicacion_id = u.id 
                 LEFT JOIN tipo_documento t ON c.tipo_documento_id = t.id
+                LEFT JOIN tipos_contenedor tc ON c.tipo_contenedor_id = tc.id
                 WHERE 1=1";
         
         $params = [];
@@ -72,7 +74,7 @@ class ContenedorFisico extends BaseModel
         }
         
         if (!empty($filtros['tipo_contenedor'])) {
-            $sql .= " AND c.tipo_contenedor = ?";
+            $sql .= " AND tc.codigo = ?";
             $params[] = $filtros['tipo_contenedor'];
         }
         
@@ -88,7 +90,7 @@ class ContenedorFisico extends BaseModel
         $orderBy = '';
         switch ($sort) {
             case 'tipo_c':
-                $orderBy = "c.tipo_contenedor $order";
+                $orderBy = "tc.codigo $order";
                 break;
             case 'numero':
                 // Natural sort logic for numbers depending if column is int or string
@@ -136,6 +138,7 @@ class ContenedorFisico extends BaseModel
                 FROM {$this->table} c 
                 LEFT JOIN ubicaciones u ON c.ubicacion_id = u.id 
                 LEFT JOIN tipo_documento t ON c.tipo_documento_id = t.id
+                LEFT JOIN tipos_contenedor tc ON c.tipo_contenedor_id = tc.id
                 WHERE 1=1";
         
         $params = [];
@@ -171,7 +174,7 @@ class ContenedorFisico extends BaseModel
         }
         
         if (!empty($filtros['tipo_contenedor'])) {
-            $sql .= " AND c.tipo_contenedor = ?";
+            $sql .= " AND tc.codigo = ?";
             $params[] = $filtros['tipo_contenedor'];
         }
         
@@ -207,15 +210,47 @@ class ContenedorFisico extends BaseModel
     }
 
     /**
+     * Buscar contenedor por ID con relaciones
+     */
+    public function find($id)
+    {
+        $sql = "SELECT c.*, 
+                       tc.codigo as tipo_contenedor,
+                       t.codigo as tipo_documento, t.nombre as tipo_documento_nombre,
+                       u.nombre as ubicacion_nombre
+                FROM {$this->table} c
+                LEFT JOIN tipos_contenedor tc ON c.tipo_contenedor_id = tc.id
+                LEFT JOIN tipo_documento t ON c.tipo_documento_id = t.id
+                LEFT JOIN ubicaciones u ON c.ubicacion_id = u.id
+                WHERE c.id = ?";
+        
+        return $this->db->fetchOne($sql, [$id]);
+    }
+
+    /**
+     * Obtener documentos del contenedor
+     */
+    /**
      * Obtener documentos del contenedor
      */
     public function getDocumentos($id)
     {
-        $sql = "SELECT id, tipo_documento, nro_comprobante, gestion, observaciones 
-                FROM documentos 
-                WHERE contenedor_fisico_id = ? 
-                ORDER BY gestion DESC, CAST(nro_comprobante AS UNSIGNED) ASC, nro_comprobante ASC";
+        $sql = "SELECT d.id, t.codigo as tipo_documento, d.nro_comprobante, d.gestion, d.observaciones 
+                FROM documentos d
+                LEFT JOIN tipo_documento t ON d.tipo_documento_id = t.id
+                WHERE d.contenedor_fisico_id = ? 
+                ORDER BY d.gestion DESC, CAST(d.nro_comprobante AS UNSIGNED) ASC, d.nro_comprobante ASC";
         return $this->db->fetchAll($sql, [$id]);
+    }
+
+    /**
+     * Obtener ID de tipo de contenedor por código
+     */
+    public function getTipoContenedorId($codigo)
+    {
+        $sql = "SELECT id FROM tipos_contenedor WHERE codigo = ?";
+        $result = $this->db->fetchOne($sql, [$codigo]);
+        return $result ? $result['id'] : null;
     }
 
     /**

@@ -15,14 +15,11 @@ $pageTitle = 'Editar Documento';
                 <label for="tipo_documento">Tipo de Documento <span class="required">*</span></label>
                 <select id="tipo_documento" name="tipo_documento" class="form-control" required>
                     <option value="">Seleccione...</option>
-                    <option value="REGISTRO_DIARIO" <?= ($documento['tipo_documento'] ?? '') === 'REGISTRO_DIARIO' ? 'selected' : '' ?>>📋 Registro Diario</option>
-                    <option value="REGISTRO_INGRESO" <?= ($documento['tipo_documento'] ?? '') === 'REGISTRO_INGRESO' ? 'selected' : '' ?>>💵 Registro Ingreso</option>
-                    <option value="REGISTRO_CEPS" <?= ($documento['tipo_documento'] ?? '') === 'REGISTRO_CEPS' ? 'selected' : '' ?>>🏦 Registro CEPS</option>
-                    <option value="PREVENTIVOS" <?= ($documento['tipo_documento'] ?? '') === 'PREVENTIVOS' ? 'selected' : '' ?>>📊 Preventivos</option>
-                    <option value="ASIENTOS_MANUALES" <?= ($documento['tipo_documento'] ?? '') === 'ASIENTOS_MANUALES' ? 'selected' : '' ?>>✍️ Asientos Manuales</option>
-                    <option value="DIARIOS_APERTURA" <?= ($documento['tipo_documento'] ?? '') === 'DIARIOS_APERTURA' ? 'selected' : '' ?>>📂 Diarios de Apertura</option>
-                    <option value="REGISTRO_TRASPASO" <?= ($documento['tipo_documento'] ?? '') === 'REGISTRO_TRASPASO' ? 'selected' : '' ?>>🔄 Registro Traspaso</option>
-                    <option value="HOJA_RUTA_DIARIOS" <?= ($documento['tipo_documento'] ?? '') === 'HOJA_RUTA_DIARIOS' ? 'selected' : '' ?>>🗺️ Hoja de Ruta - Diarios</option>
+                    <?php foreach ($tiposDocumento as $td): ?>
+                        <option value="<?= $td['codigo'] ?>" <?= ($documento['tipo_documento'] ?? '') === $td['codigo'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($td['nombre']) ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             

@@ -27,12 +27,15 @@ class PrestamoHeader extends BaseModel
     public function getDetalles($id)
     {
         $sql = "SELECT p.*, 
-                       rd.nro_comprobante, rd.gestion, rd.tipo_documento, rd.codigo_abc, rd.estado_documento,
-                       cf.tipo_contenedor, cf.numero as contenedor_numero,
+                       rd.nro_comprobante, rd.gestion, t.codigo as tipo_documento, rd.codigo_abc, e.nombre as estado_documento,
+                       tc.codigo as tipo_contenedor, cf.numero as contenedor_numero,
                        ub.nombre as ubicacion_fisica
                 FROM prestamos p
                 LEFT JOIN documentos rd ON p.documento_id = rd.id
+                LEFT JOIN estados e ON rd.estado_documento_id = e.id
+                LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
                 LEFT JOIN contenedores_fisicos cf ON p.contenedor_fisico_id = cf.id
+                LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
                 LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
                 WHERE p.encabezado_id = ?";
                 

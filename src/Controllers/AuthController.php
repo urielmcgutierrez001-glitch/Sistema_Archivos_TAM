@@ -26,7 +26,7 @@ class AuthController extends BaseController
     public function showLogin()
     {
         if (Session::isAuthenticated()) {
-            $this->redirect('/dashboard');
+            $this->redirect('/inicio');
         }
         
         $this->view('auth.login', [
@@ -59,7 +59,7 @@ class AuthController extends BaseController
                 'rol' => $user['rol']
             ]);
             
-            $this->redirect('/dashboard');
+            $this->redirect('/inicio');
         } else {
             Session::flash('error', 'Credenciales inválidas');
             $this->redirect('/login');

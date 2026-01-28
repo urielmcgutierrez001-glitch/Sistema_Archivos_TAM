@@ -15,8 +15,70 @@ ob_start();
     </div>
 </div>
 
+<!-- Módulos Disponibles (Reorganized and Moved Up) -->
+<div class="card mt-20 mb-20">
+    <h3 style="color: #1B3C84; margin-bottom: 15px;">Módulos Disponibles:</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            
+            <!-- Documentos (Catalogacion) con opciones -->
+             <div class="btn btn-primary module-btn has-options" onclick="toggleModuleOptions(this)">
+                <span style="font-size: 2em; margin-bottom: 10px;">📚</span>
+                <span>Documentos</span>
+                <div class="module-options">
+                    <a href="/catalogacion">📄 Buscar Documentos</a>
+                    <a href="/contenedores">📦 Buscar Contenedores</a>
+                    <a href="/configuracion/tipos">📄 Tipos de Documento</a>
+                </div>
+            </div>
+
+            <!-- Préstamos con opciones -->
+            <div class="btn btn-secondary module-btn has-options" onclick="toggleModuleOptions(this)">
+                <span style="font-size: 2em; margin-bottom: 10px;">📤</span>
+                <span>Control de Préstamos</span>
+                <div class="module-options">
+                    <a href="/prestamos">📋 Historial</a>
+                    <a href="/prestamos/nuevo">➕ Nuevo Préstamo</a>
+                    <a href="/prestamos/importar">📊 Importar Excel</a>
+                </div>
+            </div>
+
+            <a href="/reportes" class="btn btn-primary module-btn">
+                <span style="font-size: 2em; margin-bottom: 10px;">📊</span>
+                <span>Reportes de Gestión</span>
+            </a>
+            
+             <?php if (isset($user['rol']) && $user['rol'] === 'Administrador'): ?>
+            <a href="/admin/usuarios" class="btn btn-secondary module-btn">
+                <span style="font-size: 2em; margin-bottom: 10px;">👥</span>
+                <span>Gestión de Usuarios</span>
+            </a>
+            <?php endif; ?>
+            
+            <!-- Herramientas con opciones -->
+            <div class="btn btn-secondary module-btn has-options" onclick="toggleModuleOptions(this)">
+                <span style="font-size: 2em; margin-bottom: 10px;">🛠️</span>
+                <span>Herramientas</span>
+                <div class="module-options">
+                    <a href="/herramientas/control-amarros">📦 Control Amarros</a>
+                    <?php if (isset($user['username']) && strtoupper($user['username']) === 'VIVI'): ?>
+                    <a href="/herramientas/varita-magica">✨ Varita Mágica</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            
+            <!-- Configuración con opciones -->
+            <div class="btn btn-primary module-btn has-options" style="background-color: #6f42c1; border-color: #6f42c1;" onclick="toggleModuleOptions(this)">
+                <span style="font-size: 2em; margin-bottom: 10px;">🔧</span>
+                <span>Configuración</span>
+                <div class="module-options">
+                    <a href="/configuracion/password">🔑 Cambiar Contraseña</a>
+                </div>
+            </div>
+    </div>
+</div>
+
 <div class="main-header">
-    <h1>Dashboard</h1>
+    <h1>Inicio</h1>
 </div>
 
 <div class="stats-grid">
@@ -62,56 +124,6 @@ ob_start();
                 <canvas id="containerTypeChart"></canvas>
             </div>
         </div>
-    </div>
-</div>
-
-<div class="card mt-20">
-    <h3 style="color: #1B3C84; margin-bottom: 15px;">Módulos Disponibles:</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-            <a href="/catalogacion" class="btn btn-primary module-btn">
-                <span style="font-size: 2em; margin-bottom: 10px;">📚</span>
-                <span>Catalogación y Búsqueda</span>
-            </a>
-
-            <!-- Préstamos con opciones -->
-            <div class="btn btn-secondary module-btn has-options" onclick="toggleModuleOptions(this)">
-                <span style="font-size: 2em; margin-bottom: 10px;">📤</span>
-                <span>Control de Préstamos</span>
-                <div class="module-options">
-                    <a href="/prestamos">📋 Historial</a>
-                    <a href="/prestamos/nuevo">➕ Nuevo Préstamo</a>
-                </div>
-            </div>
-
-            <a href="/reportes" class="btn btn-primary module-btn">
-                <span style="font-size: 2em; margin-bottom: 10px;">📊</span>
-                <span>Reportes de Gestión</span>
-            </a>
-            
-            <!-- Herramientas con opciones -->
-            <div class="btn btn-secondary module-btn has-options" onclick="toggleModuleOptions(this)">
-                <span style="font-size: 2em; margin-bottom: 10px;">🛠️</span>
-                <span>Herramientas</span>
-                <div class="module-options">
-                    <a href="/herramientas/control-amarros">📦 Control Amarros</a>
-                </div>
-            </div>
-            
-            <!-- Configuración con opciones -->
-            <div class="btn btn-primary module-btn has-options" style="background-color: #6f42c1; border-color: #6f42c1;" onclick="toggleModuleOptions(this)">
-                <span style="font-size: 2em; margin-bottom: 10px;">🔧</span>
-                <span>Configuración</span>
-                <div class="module-options">
-                    <a href="/configuracion/password">🔑 Cambiar Contraseña</a>
-                </div>
-            </div>
-
-            <?php if (isset($user['rol']) && $user['rol'] === 'Administrador'): ?>
-            <a href="/admin/usuarios" class="btn btn-secondary module-btn">
-                <span style="font-size: 2em; margin-bottom: 10px;">👥</span>
-                <span>Gestión de Usuarios</span>
-            </a>
-            <?php endif; ?>
     </div>
 </div>
 

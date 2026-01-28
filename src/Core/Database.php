@@ -20,14 +20,24 @@ class Database
         $config = require __DIR__ . '/../../config/database.php';
         
         try {
+            $driver = $config['driver'] ?? 'mysql';
+            
             $dsn = sprintf(
-                "mysql:host=%s;port=%d;dbname=%s;charset=%s",
+                "%s:host=%s;port=%d;dbname=%s",
+                $driver,
                 $config['host'],
                 $config['port'],
-                $config['database'],
-                $config['charset']
+                $config['database']
             );
             
+            // Charset handling differs slightly between drivers in DSN or options, 
+            // but usually valid in DSN for both pgsql and mysql (though pgsql prefers options or client_encoding).
+            // For simplicity in this migration, appending it works for MySQL. 
+            // Postgres ignores it in DSN usually but doesn't error.
+            if ($driver === 'mysql') {
+                $dsn .= ";charset=" . $config['charset'];
+            }
+
             $this->connection = new PDO(
                 $dsn,
                 $config['username'],

@@ -108,7 +108,7 @@
     </div>
 
     <div class="info-box">
-        <strong>SOLICITANTE:</strong> <?= htmlspecialchars($prestamo['usuario_nombre'] ?? '') ?> (<?= htmlspecialchars($prestamo['unidad_nombre'] ?? '') ?>)<br>
+        <strong>SOLICITANTE:</strong> <?= htmlspecialchars($prestamo['nombre_prestatario'] ?? '') ?> (<?= htmlspecialchars($prestamo['unidad_nombre'] ?? '') ?>)<br>
         <strong>FECHA DEVOLUCIÓN ESTIMADA:</strong> <?= date('d/m/Y', strtotime($prestamo['fecha_devolucion_esperada'])) ?><br>
         <strong>OBSERVACIONES (SOLICITUD):</strong> <?= htmlspecialchars($prestamo['observaciones'] ?? 'Ninguna') ?>
     </div>
@@ -121,6 +121,7 @@
                 <th rowspan="2">NRO COMPROBANTE</th>
                 <th colspan="4">UBICACIÓN</th>
                 <th rowspan="2">TIPO DOCUMENTO</th>
+                <th rowspan="2" style="font-size: 14px; width: 30px;">☑</th>
                 <th rowspan="2">OBSERVACIONES</th>
             </tr>
             <tr>
@@ -173,6 +174,7 @@
                 <td><?= htmlspecialchars($doc['ubicacion_fisica'] ?? '') ?></td>
                 
                 <td class="text-left" style="font-size: 9px;"><?= htmlspecialchars($doc['tipo_documento'] ?? '') ?></td>
+                <td></td>
                 <td style="color: red; font-weight: bold;"><?= htmlspecialchars($obs) ?></td>
             </tr>
             <?php endforeach; ?>
@@ -182,7 +184,7 @@
                 <td colspan="3" style="text-align: right; font-weight: bold;">TOTALES:</td>
                 <td style="font-weight: bold;"><?= $conteoA > 0 ? $conteoA : '' ?></td>
                 <td style="font-weight: bold;"><?= $conteoL > 0 ? $conteoL : '' ?></td>
-                <td colspan="4"></td>
+                <td colspan="5"></td>
             </tr>
         </tfoot>
     </table>
@@ -199,11 +201,11 @@
         <div class="signatures">
             <div class="signature-box">
                 Entrega Conforme<br>
-                <strong>Archivo Central</strong>
+                <strong><?= htmlspecialchars($prestamo['usuario_nombre'] ?? 'Archivo Central') ?></strong>
             </div>
             <div class="signature-box">
                 Recibe Conforme<br>
-                <strong><?= htmlspecialchars($prestamo['usuario_nombre'] ?? '') ?></strong>
+                <strong><?= htmlspecialchars($prestamo['nombre_prestatario'] ?? '') ?></strong>
             </div>
         </div>
         
@@ -218,11 +220,11 @@
         <div class="signatures">
             <div class="signature-box">
                 Recibe Conforme (Devolución)<br>
-                <strong>Archivo Central</strong>
+                <strong><?= htmlspecialchars($prestamo['usuario_nombre'] ?? 'Archivo Central') ?></strong>
             </div>
             <div class="signature-box">
                 Entrega Conforme (Devolución)<br>
-                <strong><?= htmlspecialchars($prestamo['usuario_nombre'] ?? '') ?></strong>
+                <strong><?= htmlspecialchars($prestamo['nombre_prestatario'] ?? '') ?></strong>
             </div>
         </div>
 

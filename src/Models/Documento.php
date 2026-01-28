@@ -17,12 +17,17 @@ class Documento extends BaseModel
     public function findWithContenedor($id)
     {
         $sql = "SELECT rd.*, 
-                       cf.tipo_contenedor, cf.numero AS contenedor_numero, 
+                       tc.codigo AS tipo_contenedor, cf.numero AS contenedor_numero, 
                        cf.color, cf.bloque_nivel,
-                       u.nombre AS ubicacion_nombre, u.descripcion AS ubicacion_descripcion
+                       u.nombre AS ubicacion_nombre, u.descripcion AS ubicacion_descripcion,
+                       e.nombre AS estado_documento,
+                       t.codigo AS tipo_documento
                 FROM {$this->table} rd
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
                 LEFT JOIN ubicaciones u ON cf.ubicacion_id = u.id
+                LEFT JOIN estados e ON rd.estado_documento_id = e.id
+                LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
                 WHERE rd.id = ?";
         
         return $this->db->fetchOne($sql, [$id]);
@@ -59,12 +64,17 @@ class Documento extends BaseModel
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
         $sql = "SELECT rd.*, 
-                       cf.tipo_contenedor, cf.numero AS contenedor_numero, 
+                       tc.codigo AS tipo_contenedor, cf.numero AS contenedor_numero, 
                        cf.color, cf.bloque_nivel,
-                       u.nombre AS ubicacion_nombre
+                       u.nombre AS ubicacion_nombre,
+                       e.nombre AS estado_documento,
+                       t.codigo AS tipo_documento
                 FROM {$this->table} rd
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
                 LEFT JOIN ubicaciones u ON cf.ubicacion_id = u.id
+                LEFT JOIN estados e ON rd.estado_documento_id = e.id
+                LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
                 {$whereClause}
                 ORDER BY rd.gestion DESC, rd.nro_comprobante ASC";
         
@@ -132,9 +142,9 @@ class Documento extends BaseModel
         if (!empty($filters['estado_documento'])) {
             if ($filters['estado_documento'] === 'FALTA') {
                  // Caso especial: Irregularidades (Falta y Prestado)
-                 $where[] = "(rd.estado_documento = 'FALTA' OR (rd.estado_documento = 'PRESTADO' AND rd.observaciones LIKE '%FALTA%'))";
+                 $where[] = "(e.nombre = 'FALTA' OR (e.nombre = 'PRESTADO' AND rd.observaciones LIKE '%FALTA%'))";
             } else {
-                 $where[] = "rd.estado_documento = ?";
+                 $where[] = "e.nombre = ?";
                  $params[] = $filters['estado_documento'];
             }
         }
@@ -145,27 +155,10 @@ class Documento extends BaseModel
                 $where[] = "rd.tipo_documento_id = ?";
                 $params[] = $filters['tipo_documento'];
             } else {
-                // If string, assume exact code match (from select) or use the legacy column for now?
-                // Better to use the join if we want to drop the column.
-                // But wait, the join in buscarAvanzado is added in the SELECT part in previous step, 
-                // but the WHERE clause is built BEFORE that SQL string is constructed.
-                // This means I cannot use 't.codigo' in the WHERE clause unless I confirm the join is present in count/main query.
-                // Ah, the main query structure in logic above builds $where first.
-                // So I need to ensure the JOIN is available for the WHERE clause.
-                // But valid SQL requires Join to be in FROM...JOIN...
-                // So I will update this block to use `rd.tipo_documento` (legacy) which works safe,
-                // OR `rd.tipo_documento_id` if I can resolve it.
-                // Given I want to support removal, I should change this to use `t.codigo` BUT `t` is not joined yet in the WHERE phase?
-                // The query is constructed AFTER.
-                // So: I will just use `rd.tipo_documento_id` if I can, but I can't look it up here easily without Model dependency.
-                // For now, I will keep using `rd.tipo_documento` (legacy) as the user just asked to make ID available/FK.
-                // Removing the column completely breaks this unless I refactor the WHERE construction to include the JOIN.
-                // Actually, I can use `rd.tipo_documento` (string) as long as the column exists.
-                // If the user drops the column, this breaks.
-                // Let's assume the user keeps it for now or I'd need to rewrite the whole method to ensure 't' alias is available.
-                // I'll stick to legacy support mixed with ID support.
-                 $where[] = "rd.tipo_documento = ?";
-                 $params[] = $filters['tipo_documento'];
+                 // If string, assume exact code match
+                 $where[] = "(t.nombre LIKE ? OR t.codigo LIKE ?)";
+                 $params[] = '%' . $filters['tipo_documento'] . '%';
+                 $params[] = '%' . $filters['tipo_documento'] . '%';
             }
         }
         
@@ -176,13 +169,16 @@ class Documento extends BaseModel
         $offset = ($page - 1) * $perPage;
         
         $sql = "SELECT rd.*, 
-                       cf.tipo_contenedor, cf.numero as contenedor_numero,
+                       tc.codigo AS tipo_contenedor, cf.numero as contenedor_numero,
                        u.nombre as ubicacion_nombre,
-                       t.nombre as tipo_documento_nombre, t.codigo as tipo_documento_codigo
+                       t.nombre as tipo_documento_nombre, t.codigo as tipo_documento,
+                       e.nombre as estado_documento
                 FROM {$this->table} rd
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
                 LEFT JOIN ubicaciones u ON cf.ubicacion_id = u.id
                 LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
+                LEFT JOIN estados e ON rd.estado_documento_id = e.id
                 {$whereClause}";
                 
         // Sorting Logic
@@ -209,13 +205,13 @@ class Documento extends BaseModel
                 $orderBy = "rd.codigo_abc $order";
                 break;
             case 'contenedor':
-                $orderBy = "cf.tipo_contenedor $order, cf.numero $order";
+                $orderBy = "tc.codigo $order, cf.numero $order";
                 break;
             case 'ubicacion':
                 $orderBy = "u.nombre $order";
                 break;
             case 'estado':
-                $orderBy = "rd.estado_documento $order";
+                $orderBy = "e.nombre $order";
                 break;
             default:
                 // Default sort
@@ -286,16 +282,17 @@ class Documento extends BaseModel
         if (!empty($filters['estado_documento'])) {
             if ($filters['estado_documento'] === 'FALTA') {
                  // Caso especial: Irregularidades (Falta y Prestado)
-                 $where[] = "(rd.estado_documento = 'FALTA' OR (rd.estado_documento = 'PRESTADO' AND rd.observaciones LIKE '%FALTA%'))";
+                 $where[] = "(e.nombre = 'FALTA' OR (e.nombre = 'PRESTADO' AND rd.observaciones LIKE '%FALTA%'))";
             } else {
-                 $where[] = "rd.estado_documento = ?";
+                 $where[] = "e.nombre = ?";
                  $params[] = $filters['estado_documento'];
             }
         }
         
         if (!empty($filters['tipo_documento'])) {
-            $where[] = "rd.tipo_documento = ?";
-            $params[] = $filters['tipo_documento'];
+            $where[] = "(t.nombre LIKE ? OR t.codigo LIKE ?)";
+            $params[] = '%' . $filters['tipo_documento'] . '%';
+            $params[] = '%' . $filters['tipo_documento'] . '%';
         }
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
@@ -303,6 +300,9 @@ class Documento extends BaseModel
         $sql = "SELECT COUNT(*) as total 
                 FROM {$this->table} rd 
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
+                LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
+                LEFT JOIN estados e ON rd.estado_documento_id = e.id
                 {$whereClause}";
         $result = $this->db->fetchOne($sql, $params);
         
@@ -315,13 +315,26 @@ class Documento extends BaseModel
     public function getAvailable()
     {
         $sql = "SELECT rd.*, 
-                       cf.tipo_contenedor, cf.numero as contenedor_numero
+                       tc.codigo AS tipo_contenedor, cf.numero as contenedor_numero,
+                       e.nombre AS estado_documento
                 FROM {$this->table} rd
                 LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
-                WHERE rd.estado_documento = 'DISPONIBLE'
+                LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
+                LEFT JOIN estados e ON rd.estado_documento_id = e.id
+                WHERE e.nombre = 'DISPONIBLE'
                 ORDER BY rd.gestion DESC, rd.nro_comprobante DESC
                 LIMIT 100";
                 
         return $this->db->fetchAll($sql);
+    }
+
+    /**
+     * Obtener ID de estado por nombre
+     */
+    public function getEstadoId($nombre)
+    {
+        $sql = "SELECT id FROM estados WHERE nombre = ?";
+        $result = $this->db->fetchOne($sql, [$nombre]);
+        return $result ? $result['id'] : null;
     }
 }

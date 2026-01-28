@@ -24,9 +24,9 @@ $user = $user ?? \TAMEP\Core\Session::user();
     <nav>
         <ul>
             <li>
-                <a href="/dashboard" class="sidebar-link">
+                <a href="/inicio" class="sidebar-link">
                     <span class="icon">🏠</span>
-                    <span>Dashboard</span>
+                    <span>Inicio</span>
                 </a>
             </li>
             

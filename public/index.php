@@ -35,7 +35,7 @@ $router->get('/logout', 'AuthController@logout');
 
 // Dashboard
 $router->get('/', 'DashboardController@index', ['AuthMiddleware']);
-$router->get('/dashboard', 'DashboardController@index', ['AuthMiddleware']);
+$router->get('/inicio', 'DashboardController@index', ['AuthMiddleware']);
 
 // Catalogación
 $router->get('/catalogacion', 'CatalogacionController@index', ['AuthMiddleware']);

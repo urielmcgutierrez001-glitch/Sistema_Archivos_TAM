@@ -119,8 +119,10 @@ class ContenedoresController extends BaseController
     {
         $this->requireAuth();
         
+        $tipoId = $this->contenedorFisico->getTipoContenedorId($_POST['tipo_contenedor']);
+        
         $data = [
-            'tipo_contenedor' => $_POST['tipo_contenedor'],
+            'tipo_contenedor_id' => $tipoId,
             'tipo_documento_id' => !empty($_POST['tipo_documento']) ? $_POST['tipo_documento'] : null,
             'numero' => $_POST['numero'],
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
@@ -185,8 +187,10 @@ class ContenedoresController extends BaseController
     {
         $this->requireAuth();
         
+        $tipoId = $this->contenedorFisico->getTipoContenedorId($_POST['tipo_contenedor']);
+        
         $data = [
-            'tipo_contenedor' => $_POST['tipo_contenedor'],
+            'tipo_contenedor_id' => $tipoId,
             'tipo_documento_id' => !empty($_POST['tipo_documento']) ? $_POST['tipo_documento'] : null,
             'numero' => $_POST['numero'],
             'ubicacion_id' => !empty($_POST['ubicacion_id']) ? $_POST['ubicacion_id'] : null,
@@ -259,8 +263,10 @@ class ContenedoresController extends BaseController
             exit;
         }
         
+        $tipoId = $this->contenedorFisico->getTipoContenedorId($input['tipo_contenedor']);
+        
         $data = [
-            'tipo_contenedor' => $input['tipo_contenedor'],
+            'tipo_contenedor_id' => $tipoId,
             'tipo_documento_id' => !empty($input['tipo_documento']) ? $input['tipo_documento'] : null,
             'numero' => $input['numero'],
             'ubicacion_id' => !empty($input['ubicacion_id']) ? $input['ubicacion_id'] : null,
