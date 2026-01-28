@@ -305,7 +305,7 @@ $pageTitle = 'Nuevo Préstamo - Selección Múltiple';
             
             <div class="form-group">
                 <label for="fecha_devolucion">Fecha de Devolución <span class="required" id="req-devolucion">*</span></label>
-                <input type="date" id="fecha_devolucion" class="form-control">
+                <input type="date" id="fecha_devolucion" class="form-control" value="<?= date('Y-m-d', strtotime('+14 days')) ?>">
                 <small class="text-muted" id="help-devolucion" style="display:none;">Opcional para históricos</small>
             </div>
 

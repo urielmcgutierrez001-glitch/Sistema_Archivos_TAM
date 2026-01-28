@@ -880,7 +880,7 @@ class PrestamosController extends BaseController
                 ];
                 
                 if ($this->prestamo->create($data)) {
-                    $this->documento->update($docId, ['estado_documento' => 'PRESTADO']);
+                    $this->documento->update($docId, ['estado_documento_id' => $this->documento->getEstadoId('PRESTADO')]);
                     $count++;
                 }
             }
@@ -926,7 +926,7 @@ class PrestamosController extends BaseController
                         'fecha_devolucion_real' => date('Y-m-d'),
                         'estado' => 'Devuelto'
                     ]);
-                    $this->documento->update($doc['documento_id'], ['estado_documento' => 'DISPONIBLE']);
+                    $this->documento->update($doc['documento_id'], ['estado_documento_id' => $this->documento->getEstadoId('DISPONIBLE')]);
                     $changes++;
                 }
             } elseif ($action === 'revertir') {
@@ -937,7 +937,7 @@ class PrestamosController extends BaseController
                         'fecha_devolucion_real' => null,
                         'estado' => 'Prestado'
                     ]);
-                    $this->documento->update($doc['documento_id'], ['estado_documento' => 'PRESTADO']);
+                    $this->documento->update($doc['documento_id'], ['estado_documento_id' => $this->documento->getEstadoId('PRESTADO')]);
                     $changes++;
                 }
             }
@@ -1017,14 +1017,14 @@ class PrestamosController extends BaseController
         
         if (!$encabezado_id || !$documento_id) {
             Session::flash('error', 'Datos incompletos');
-            $this->redirect('/prestamos/procesar/' . $encabezado_id); // Redirect back to edit
+            $this->redirect('/prestamos/editar/' . $encabezado_id); // Redirect to edit view
         }
 
         // Verificar documento
         $doc = $this->documento->find($documento_id);
         if (!$doc || !in_array($doc['estado_documento'], ['DISPONIBLE', 'NO UTILIZADO', 'ANULADO'])) {
              Session::flash('error', 'El documento no está disponible');
-             $this->redirect('/prestamos/procesar/' . $encabezado_id);
+             $this->redirect('/prestamos/editar/' . $encabezado_id);
         }
         
         // Obtener header para fechas
@@ -1052,7 +1052,7 @@ class PrestamosController extends BaseController
             Session::flash('error', 'Error al agregar documento');
         }
         
-        $this->redirect('/prestamos/procesar/' . $encabezado_id);
+        $this->redirect('/prestamos/editar/' . $encabezado_id);
     }
     
     /**
@@ -1082,7 +1082,171 @@ class PrestamosController extends BaseController
         $this->prestamoHeader->getDb()->query("DELETE FROM prestamos WHERE id = ?", [$detalle_id]);
         
         Session::flash('success', 'Documento eliminado del préstamo');
-        $this->redirect('/prestamos/procesar/' . $encabezado_id);
+        $this->redirect('/prestamos/editar/' . $encabezado_id);
     }
 
+    /**
+     * Editar Préstamo (Header + Agregar/Quitar Documentos)
+     */
+    public function editar($id)
+    {
+        $this->requireAuth();
+        
+        // 1. Obtener Datos del Encabezado
+        $sql = "SELECT ph.*, 
+                       u.nombre_completo as usuario_nombre, 
+                       ub.nombre as unidad_nombre 
+                FROM prestamos_encabezados ph
+                LEFT JOIN usuarios u ON ph.usuario_id = u.id
+                LEFT JOIN unidades_areas ub ON ph.unidad_area_id = ub.id
+                WHERE ph.id = ?";
+        $prestamo = $this->prestamoHeader->getDb()->fetchOne($sql, [$id]);
+        
+        if (!$prestamo) {
+            Session::flash('error', 'Préstamo no encontrado');
+            $this->redirect('/prestamos');
+        }
+
+        // 2. Obtener Detalles Actuales
+        $detalles = $this->prestamoHeader->getDetalles($id);
+
+        // 3. Lógica de Búsqueda (Copiada de nuevo())
+        // Filtros
+        $filtros = [
+            'search' => $_GET['search'] ?? '',
+            'gestion' => $_GET['gestion'] ?? '',
+            'tipo_documento' => $_GET['tipo_documento'] ?? '',
+            'sort' => $_GET['sort'] ?? 'gestion',
+            'order' => $_GET['order'] ?? 'DESC',
+            'page' => $_GET['page'] ?? 1,
+            'per_page' => $_GET['per_page'] ?? 20
+        ];
+
+        // Validar sort col
+        $allowedSort = ['tipo_documento', 'gestion', 'nro_comprobante', 'ubicacion', 'estado'];
+        if (!in_array($filtros['sort'], $allowedSort)) $filtros['sort'] = 'gestion';
+        
+        $page = (int)$filtros['page'];
+        $perPage = (int)$filtros['per_page'];
+        $offset = ($page - 1) * $perPage;
+
+        // Construir Query de Búsqueda
+        $where = ["rd.estado_documento_id IN (SELECT id FROM estados WHERE nombre IN ('DISPONIBLE', 'NO UTILIZADO', 'ANULADO', 'FALTA'))"]; // Exclude PRESTADO unless it's in THIS loan (but logic separates them)
+        $params = [];
+        
+        if (!empty($filtros['search'])) {
+            $search = $filtros['search'];
+            if (preg_match('/^(\d+)-(\d+)$/', $search, $matches)) {
+                $min = min((int)$matches[1], (int)$matches[2]);
+                $max = max((int)$matches[1], (int)$matches[2]);
+                $where[] = "CAST(rd.nro_comprobante AS UNSIGNED) BETWEEN ? AND ?";
+                $params[] = $min; $params[] = $max;
+            } else {
+                $where[] = "(rd.nro_comprobante = ? OR rd.codigo_abc = ?)";
+                $params[] = $search; $params[] = $search;
+            }
+        }
+        
+        if (!empty($filtros['gestion'])) {
+            $where[] = "rd.gestion = ?";
+            $params[] = $filtros['gestion'];
+        }
+        
+        if (!empty($filtros['tipo_documento'])) {
+            $where[] = "t.codigo = ?";
+            $params[] = $filtros['tipo_documento'];
+        }
+        
+        $whereClause = 'WHERE ' . implode(' AND ', $where);
+        
+        // Sorting
+        $orderBy = "rd.gestion DESC, rd.nro_comprobante DESC";
+        $orderDir = $filtros['order'] === 'ASC' ? 'ASC' : 'DESC';
+        if ($filtros['sort'] === 'gestion') $orderBy = "rd.gestion $orderDir";
+        if ($filtros['sort'] === 'nro_comprobante') {
+             if ($orderDir === 'ASC') $orderBy = "CAST(rd.nro_comprobante AS UNSIGNED) ASC, rd.nro_comprobante ASC";
+             else $orderBy = "CAST(rd.nro_comprobante AS UNSIGNED) DESC, rd.nro_comprobante DESC";
+        }
+        if ($filtros['sort'] === 'ubicacion') $orderBy = "ub.nombre $orderDir";
+        if ($filtros['sort'] === 'estado') $orderBy = "e.nombre $orderDir";
+
+        // Execute Count
+        $sqlCount = "SELECT COUNT(*) as total FROM documentos rd 
+                     LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id 
+                     LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id 
+                     LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
+                     LEFT JOIN estados e ON rd.estado_documento_id = e.id
+                     {$whereClause}";
+        $resCount = $this->documento->getDb()->fetchOne($sqlCount, $params);
+        $total = $resCount['total'] ?? 0;
+
+        // Execute Search
+        $sqlDocs = "SELECT rd.*, tc.codigo as tipo_contenedor, cf.numero as contenedor_numero, ub.nombre as ubicacion_fisica,
+                           e.nombre as estado_documento,
+                           t.codigo as tipo_documento
+                    FROM documentos rd
+                    LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id
+                    LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id
+                    LEFT JOIN tipos_contenedor tc ON cf.tipo_contenedor_id = tc.id
+                    LEFT JOIN estados e ON rd.estado_documento_id = e.id
+                    LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
+                    {$whereClause}
+                    ORDER BY {$orderBy}
+                    LIMIT {$perPage} OFFSET {$offset}";
+        
+        $documentosDisponibles = $this->documento->getDb()->fetchAll($sqlDocs, $params);
+
+        $this->view('prestamos.editar', [
+            'prestamo' => $prestamo,
+            'detalles' => $detalles,
+            'documentosDisponibles' => $documentosDisponibles,
+            'unidades' => $this->unidadArea->getActive(),
+            'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
+            'filtros' => $filtros,
+            'paginacion' => [
+                'total' => $total,
+                'per_page' => $perPage,
+                'page' => $page,
+                'total_pages' => ceil($total / $perPage)
+            ],
+            'user' => $this->getCurrentUser()
+        ]);
+    }
+
+    /**
+     * Actualizar Encabezado del Préstamo
+     */
+    public function actualizarEncabezado($id)
+    {
+        $this->requireAuth();
+        
+        $data = [
+            'unidad_area_id' => $_POST['unidad_area_id'] ?? null,
+            'nombre_prestatario' => $_POST['nombre_prestatario'] ?? null,
+            'fecha_prestamo' => $_POST['fecha_prestamo'] ?? null,
+            'fecha_devolucion_esperada' => $_POST['fecha_devolucion_esperada'] ?? null,
+            'observaciones' => $_POST['observaciones'] ?? null
+        ];
+
+        // Validaciones básicas
+        if (empty($data['unidad_area_id']) || empty($data['fecha_prestamo'])) {
+            Session::flash('error', 'Unidad y Fecha Préstamo son obligatorios');
+            $this->redirect('/prestamos/editar/' . $id);
+        }
+
+        if ($this->prestamoHeader->update($id, $data)) {
+            // También actualizar fechas en los detalles si cambiaron en el header?
+            // Generalmente sí, para mantener consistencia.
+            $this->prestamoHeader->getDb()->query(
+                "UPDATE prestamos SET fecha_prestamo = ?, fecha_devolucion_esperada = ? WHERE encabezado_id = ?", 
+                [$data['fecha_prestamo'], $data['fecha_devolucion_esperada'], $id]
+            );
+
+            Session::flash('success', 'Préstamo actualizado exitosamente');
+        } else {
+            Session::flash('error', 'Error al actualizar el préstamo');
+        }
+        
+        $this->redirect('/prestamos/editar/' . $id);
+    }
 }
