@@ -342,6 +342,7 @@ class PrestamosController extends BaseController
                 $sqlCount = "SELECT COUNT(*) as total FROM documentos rd 
                              LEFT JOIN contenedores_fisicos cf ON rd.contenedor_fisico_id = cf.id 
                              LEFT JOIN ubicaciones ub ON cf.ubicacion_id = ub.id 
+                             LEFT JOIN tipo_documento t ON rd.tipo_documento_id = t.id
                              {$whereClause}";
                 $resCount = $this->documento->getDb()->fetchOne($sqlCount, $params);
                 $total = $resCount['total'] ?? 0;
