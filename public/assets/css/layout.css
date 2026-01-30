@@ -26,7 +26,8 @@
 /* Sidebar colapsado */
 .sidebar.collapsed {
     width: 70px;
-    overflow: visible; /* Permitir que los submenús floten fuera */
+    overflow: visible;
+    /* Permitir que los submenús floten fuera */
 }
 
 /* Toggle Button */
@@ -376,31 +377,15 @@ details summary::marker {
 }
 
 /* Fix floating submenus for collapsed sidebar */
-.sidebar.collapsed details {
-    position: relative;
-}
-
+/* Fix floating submenus for collapsed sidebar: DISABLED as per user request to hide options */
 .sidebar.collapsed details[open] .sidebar-submenu {
-    display: block !important;
-    position: absolute;
-    left: 70px;
-    top: 0;
-    width: 200px;
-    background: #142D66; /* Mismo color que el fondo del sidebar */
-    padding: 10px 0;
-    border-radius: 0 8px 8px 0;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
-    z-index: 1000;
+    display: none !important;
 }
 
-.sidebar.collapsed .sidebar-submenu a {
-    justify-content: flex-start !important;
-    padding-left: 20px !important;
-    white-space: nowrap;
+.sidebar.collapsed details>summary {
+    pointer-events: none;
+    /* Prevent clicking to open when collapsed if desired, otherwise just hiding content is enough. But user said "disappear". */
+    cursor: default;
 }
 
-/* Highlight the active icon when menu is open */
-.sidebar.collapsed details[open] > summary {
-    background: rgba(255, 255, 255, 0.1);
-    color: #FFD100;
-}
+/* Optional: When collapsed, hovering could show a tooltip instead? For now just hide options. */

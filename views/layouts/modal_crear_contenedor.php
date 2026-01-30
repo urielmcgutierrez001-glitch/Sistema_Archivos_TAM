@@ -78,8 +78,31 @@ function abrirModalCrearContenedor(targetId) {
     document.getElementById('targetSelectId').value = targetId;
     document.getElementById('modalCrearContenedor').style.display = 'flex';
     
-    // Attempt to populate locations if empty (optional enhancement)
-    // For now assuming $ubicaciones is passed to the view including this partial
+    // --- Pre-population Logic ---
+    // 1. Gestion (Year)
+    const mainGestion = document.getElementById('gestion');
+    const modalGestion = document.querySelector('#formCrearContenedorRapido input[name="gestion"]');
+    if (mainGestion && modalGestion && mainGestion.value) {
+        modalGestion.value = mainGestion.value;
+    }
+
+    // 2. Tipo Documento
+    // Main form uses CODE (e.g. 'DIA'), Modal uses ID. We need to match.
+    const mainTipo = document.getElementById('tipo_documento'); // Select with Code
+    const modalTipo = document.getElementById('quick_tipo_documento'); // Select with ID
+    
+    if (mainTipo && modalTipo && mainTipo.value) {
+        const code = mainTipo.value; // e.g. "DIA"
+        // Find option in modal that contains this code
+        // Modal options format: "Name (CODE)"
+        for (let i = 0; i < modalTipo.options.length; i++) {
+            const opt = modalTipo.options[i];
+            if (opt.text.includes('(' + code + ')')) {
+                modalTipo.selectedIndex = i;
+                break;
+            }
+        }
+    }
 }
 
 function cerrarModalCrearContenedor() {
@@ -116,28 +139,49 @@ function guardarContenedorRapido() {
     .then(response => response.json())
     .then(result => {
         if (result.success) {
-            // Add option to the target select
-            if (targetSelectElementId) {
-                const selectInfo = targetSelectElementId.split('|'); // Handle multiple if needed, but simple ID is enough usually
-                // Support multiple selects? Just one for now.
+            // Success! Now update the UI.
+            
+            // Check if we are dealing with the Autocomplete Search Input
+            if (targetSelectElementId === 'contenedor_search' && typeof selectContenedor === 'function') {
+                // We are in the "Edit Document" view with Autocomplete
+                // Construct item object expected by selectContenedor
+                const newItem = {
+                    id: result.data.id,
+                    tipo_documento_codigo: '???', // We might not have this back from API perfectly or need to guess
+                    gestion: data.gestion,
+                    tipo_contenedor: data.tipo_contenedor,
+                    numero: data.numero,
+                    ubicacion_nombre: '' // We don't have name easily, but that's ok
+                };
                 
+                // Try to get Code from modal select text to be nicer
+                const modalTipo = document.getElementById('quick_tipo_documento');
+                if (modalTipo.selectedIndex >= 0) {
+                     const text = modalTipo.options[modalTipo.selectedIndex].text;
+                     const match = text.match(/\(([^)]+)\)/);
+                     if (match) newItem.tipo_documento_codigo = match[1];
+                }
+
+                // Update the UI
+                selectContenedor(newItem);
+                
+                // Also update the select location filter logic if needed? No, autocomplete ignores filter logic visually
+                
+            } else {
+                // Fallback for standard Select elements (e.g. Create View if not updated yet)
                 const select = document.getElementById(targetSelectElementId);
-                if (select) {
+                if (select && select.tagName === 'SELECT') {
                     const option = new Option(result.data.text, result.data.id);
-                    // Add attributes if needed
                     option.setAttribute('data-ubicacion', result.data.ubicacion_id || '');
-                    
                     select.add(option, select.options[1]); // Add top after "Sin asignar"
                     select.value = result.data.id;
-                    
-                    // Trigger change event if needed
                     const event = new Event('change');
                     select.dispatchEvent(event);
                 }
             }
+
             cerrarModalCrearContenedor();
-            // Optional: Show toast success
-            alert('Contenedor creado exitosamente');
+            alert('Contenedor creado y asignado exitosamente');
         } else {
             alert('Error: ' + result.message);
         }

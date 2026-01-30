@@ -320,6 +320,24 @@ class ContenedoresController extends BaseController
         exit;
     }
 
+    /**
+     * API para buscar contenedores (AJAX Autocomplete)
+     */
+    public function apiBuscar()
+    {
+        $this->requireAuth();
+        
+        $query = $_GET['q'] ?? '';
+        
+        if (strlen($query) < 1) {
+            $this->json([]);
+        }
+        
+        $resultados = $this->contenedorFisico->buscarRapida($query);
+        
+        $this->json($resultados);
+    }
+
     private function getCurrentUser()
     {
         return \TAMEP\Core\Session::user();

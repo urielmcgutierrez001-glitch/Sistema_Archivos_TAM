@@ -16,12 +16,11 @@ class Prestamo extends BaseModel
         'encabezado_id',
         'documento_id', 
         'contenedor_fisico_id', 
-        'usuario_id', 
-        'fecha_prestamo', 
         'fecha_devolucion_esperada',
         'fecha_devolucion_real',
         'observaciones',
-        'estado'
+        'estado',
+        'estado_anterior_id'
     ];
     
     /**

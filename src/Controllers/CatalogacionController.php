@@ -343,23 +343,40 @@ class CatalogacionController extends BaseController
     {
         $this->requireAuth();
         
-        $documento = $this->documento->find($id);
+        $documento = $this->documento->findWithContenedor($id);
         
         if (!$documento) {
             \TAMEP\Core\Session::flash('error', 'Documento no encontrado');
             $this->redirect('/catalogacion');
         }
+
+        // Recuperar filtros de la URL para mantener el estado al volver
+        $filters = [
+            'page' => $_GET['page'] ?? 1,
+            'search' => $_GET['search'] ?? '',
+            'gestion' => $_GET['gestion'] ?? '',
+            'ubicacion_id' => $_GET['ubicacion_id'] ?? '',
+            'estado_documento' => $_GET['estado_documento'] ?? '',
+            'tipo_documento' => $_GET['tipo_documento'] ?? '',
+            'sort' => $_GET['sort'] ?? '',
+            'order' => $_GET['order'] ?? ''
+        ];
         
-        // Obtener contenedores para el select
-        $contenedores = $this->contenedorFisico->buscar();
+        // Obtener contenedores para el select (LIMITADO para inicial, búsqueda por AJAX)
+        // Para editar, necesitamos asegurar que el contenedor actual esté en la lista o se cargue
+        $contenedores = []; 
+        if (!empty($documento['contenedor_fisico_id'])) {
+             $contenedores[] = $this->contenedorFisico->find($documento['contenedor_fisico_id']);
+        }
+        // $contenedores = $this->contenedorFisico->buscar(); // REMOVED: Too heavy for list
         
         $this->view('documentos.editar', [
-            'documentos' => $documento, // Wait, key is 'documento' in original but check params
             'documento' => $documento,
-            'contenedores' => $contenedores,
+            'contenedores' => $contenedores, // Solo el actual, el resto por AJAX
             'ubicaciones' => $this->ubicacion->all(),
             'tiposDocumento' => $this->tipoDocumento->getAllOrderedById(),
-            'user' => $this->getCurrentUser()
+            'user' => $this->getCurrentUser(),
+            'filters' => $filters // Pass filters to view
         ]);
     }
     
@@ -392,12 +409,31 @@ class CatalogacionController extends BaseController
         // Actualizar
         $success = $this->documento->update($id, $data);
         
+        // Reconstruir URL con filtros
+        $filters = [
+            'page' => $_POST['filter_page'] ?? 1,
+            'search' => $_POST['filter_search'] ?? '',
+            'gestion' => $_POST['filter_gestion'] ?? '',
+            'ubicacion_id' => $_POST['filter_ubicacion_id'] ?? '',
+            'estado_documento' => $_POST['filter_estado_documento'] ?? '',
+            'tipo_documento' => $_POST['filter_tipo_documento'] ?? '',
+            'sort' => $_POST['filter_sort'] ?? '',
+            'order' => $_POST['filter_order'] ?? ''
+        ];
+        // Remove empty filters
+        $filters = array_filter($filters, function($value) { return $value !== ''; });
+        $queryString = http_build_query($filters);
+        $redirectUrl = '/catalogacion' . ($queryString ? '?' . $queryString : '');
+
         if ($success) {
             \TAMEP\Core\Session::flash('success', 'Documento actualizado exitosamente');
-            $this->redirect('/catalogacion/ver/' . $id);
+            // Redirigir a la lista manteniendo filtros en lugar de 'ver'
+            $this->redirect($redirectUrl); 
         } else {
             \TAMEP\Core\Session::flash('error', 'Error al actualizar el documento');
-            $this->redirect('/catalogacion/editar/' . $id);
+            // Si falla, volver al form de edición, idealmente pasando filtros de nuevo, 
+            // pero por simplicidad volver al mismo ID con query string si es posible o referer
+            $this->redirect('/catalogacion/editar/' . $id . ($queryString ? '?' . $queryString : ''));
         }
     }
     

@@ -216,7 +216,7 @@ class ContenedorFisico extends BaseModel
     {
         $sql = "SELECT c.*, 
                        tc.codigo as tipo_contenedor,
-                       t.codigo as tipo_documento, t.nombre as tipo_documento_nombre,
+                       t.codigo as tipo_documento_codigo, t.codigo as tipo_documento, t.nombre as tipo_documento_nombre,
                        u.nombre as ubicacion_nombre
                 FROM {$this->table} c
                 LEFT JOIN tipos_contenedor tc ON c.tipo_contenedor_id = tc.id
@@ -256,6 +256,9 @@ class ContenedorFisico extends BaseModel
     /**
      * Actualizar contenido (Remover documentos desmarcados)
      */
+    /**
+     * Actualizar contenido (Remover documentos desmarcados)
+     */
     public function actualizarContenido($contenedorId, $idsMantener = [])
     {
         // Si no hay IDs para mantener, vaciar todo el contenedor
@@ -277,5 +280,52 @@ class ContenedorFisico extends BaseModel
         $params = array_merge([$contenedorId], $idsMantener);
         
         return $this->db->query($sql, $params);
+    }
+
+    /**
+     * Búsqueda rápida para Autocomplete
+     */
+    public function buscarRapida($term, $limit = 20)
+    {
+        $term = trim($term);
+        $termLike = "%{$term}%";
+        
+        $sql = "SELECT c.*, 
+                       tc.codigo as tipo_contenedor,
+                       t.codigo as tipo_documento_codigo,
+                       u.nombre as ubicacion_nombre
+                FROM {$this->table} c
+                LEFT JOIN tipos_contenedor tc ON c.tipo_contenedor_id = tc.id
+                LEFT JOIN tipo_documento t ON c.tipo_documento_id = t.id
+                LEFT JOIN ubicaciones u ON c.ubicacion_id = u.id
+                WHERE 
+                   (c.numero LIKE ? OR
+                    c.gestion LIKE ? OR
+                    c.codigo_abc LIKE ? OR
+                    tc.codigo LIKE ? OR
+                    tc.nombre LIKE ? OR
+                    t.codigo LIKE ? OR
+                    t.nombre LIKE ?)
+                ORDER BY 
+                    (c.numero = ?) DESC, -- Prioridad 1: Coincidencia exacta de número
+                    c.gestion DESC,      -- Prioridad 2: Años más recientes
+                    CAST(c.numero AS UNSIGNED) ASC, -- Prioridad 3: Orden numérico natural (1, 2, 10...)
+                    c.id DESC
+                LIMIT ?";
+        
+        // Params for each ? in the query
+        $params = [
+            $termLike, // numero
+            $termLike, // gestion
+            $termLike, // codigo_abc
+            $termLike, // tc.codigo
+            $termLike, // tc.nombre
+            $termLike, // t.codigo
+            $termLike, // t.nombre
+            $term,     // exact match numero (for ORDER BY)
+            $limit     // LIMIT
+        ];
+        
+        return $this->db->fetchAll($sql, $params);
     }
 }

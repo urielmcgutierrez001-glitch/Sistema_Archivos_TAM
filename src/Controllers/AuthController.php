@@ -30,7 +30,9 @@ class AuthController extends BaseController
         }
         
         $this->view('auth.login', [
-            'csrf_token' => $this->csrf()
+            'csrf_token' => $this->csrf(),
+            'error' => Session::flash('error'),
+            'success' => Session::flash('success')
         ]);
     }
     

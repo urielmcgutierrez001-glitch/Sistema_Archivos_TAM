@@ -58,9 +58,13 @@ $router->post('/prestamos/actualizarEstados', 'PrestamosController@actualizarEst
 $router->get('/prestamos/devolver/{id}', 'PrestamosController@devolver', ['AuthMiddleware']);
 $router->get('/prestamos/exportar-pdf/{id}', 'PrestamosController@exportarPdf', ['AuthMiddleware']);
 $router->get('/prestamos/exportar-excel/{id}', 'PrestamosController@exportarExcel', ['AuthMiddleware']);
+$router->post('/prestamos/agregarDetalle', 'PrestamosController@agregarDetalle', ['AuthMiddleware']);
+$router->get('/prestamos/quitarDetalle/{id}', 'PrestamosController@quitarDetalle', ['AuthMiddleware']);
 $router->get('/prestamos/importar', 'PrestamosController@vistaImportar', ['AuthMiddleware']);
 $router->post('/prestamos/importar/procesar', 'PrestamosController@procesarImportacion', ['AuthMiddleware']);
 $router->get('/prestamos/procesar/{id}', 'PrestamosController@procesar', ['AuthMiddleware']);
+$router->get('/prestamos/editar/{id}', 'PrestamosController@editar', ['AuthMiddleware']);
+$router->post('/prestamos/actualizarEncabezado/{id}', 'PrestamosController@actualizarEncabezado', ['AuthMiddleware']);
 $router->post('/prestamos/confirmarProceso', 'PrestamosController@confirmarProceso', ['AuthMiddleware']);
 $router->get('/prestamos/revertirProceso/{id}', 'PrestamosController@revertirProceso', ['AuthMiddleware']);
 
@@ -76,6 +80,7 @@ $router->get('/contenedores/ver/{id}', 'ContenedoresController@ver', ['AuthMiddl
 $router->get('/contenedores/editar/{id}', 'ContenedoresController@editar', ['AuthMiddleware']);
 $router->post('/contenedores/actualizar/{id}', 'ContenedoresController@actualizar', ['AuthMiddleware']);
 $router->get('/contenedores/eliminar/{id}', 'ContenedoresController@eliminar', ['AuthMiddleware']);
+$router->get('/contenedores/api-buscar', 'ContenedoresController@apiBuscar', ['AuthMiddleware']);
 $router->post('/contenedores/actualizar-ubicacion-masiva', 'ContenedoresController@actualizarUbicacionMasiva', ['AuthMiddleware']);
 
 // Usuarios (solo administrador)

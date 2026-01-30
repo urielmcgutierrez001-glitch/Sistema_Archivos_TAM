@@ -179,10 +179,7 @@
                 <button type="submit" class="btn">Iniciar Sesión</button>
             </form>
             
-            <div class="demo-info">
-                <strong>Usuario demo:</strong>
-                <code>admin</code> | Contraseña: <code>admin123</code>
-            </div>
+
         </div>
     </div>
 </body>

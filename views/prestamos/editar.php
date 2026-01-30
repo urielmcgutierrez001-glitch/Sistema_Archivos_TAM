@@ -6,8 +6,9 @@ $pageTitle = 'Editar Préstamo #' . $prestamo['id'];
 <div class="card">
     <div class="card-header flex-between">
         <h2>✏️ Editar Préstamo #<?= $prestamo['id'] ?></h2>
-        <div class="header-actions">
-            <a href="/prestamos/ver/<?= $prestamo['id'] ?>" class="btn btn-secondary">← Volver al Detalle</a>
+        <div class="header-actions" style="display: flex; gap: 10px;">
+            <a href="/prestamos" class="btn btn-secondary">Volver al Listado</a>
+            <a href="/prestamos/ver/<?= $prestamo['id'] ?>" class="btn btn-primary">Ver Detalle</a>
         </div>
     </div>
     
@@ -17,7 +18,8 @@ $pageTitle = 'Editar Préstamo #' . $prestamo['id'];
             📝 Datos del Préstamo
         </h3>
         
-        <form action="/prestamos/actualizarEncabezado/<?= $prestamo['id'] ?>" method="POST">
+        <form action="/prestamos/confirmarProceso" method="POST" id="form-prestamo">
+            <input type="hidden" name="encabezado_id" value="<?= $prestamo['id'] ?>">
             <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div class="form-group">
                     <label for="unidad_area_id">Unidad/Área Solicitante <span class="required">*</span></label>
@@ -56,10 +58,7 @@ $pageTitle = 'Editar Préstamo #' . $prestamo['id'];
                 </div>
             </div>
             
-            <div style="margin-top: 15px; text-align: right;">
-                <button type="submit" class="btn btn-primary">💾 Guardar Cambios del Encabezado</button>
-            </div>
-        </form>
+        <!-- Deleted separate header save button -->
     </div>
 
     <!-- 2. Lista de Documentos Actuales -->
@@ -72,48 +71,77 @@ $pageTitle = 'Editar Préstamo #' . $prestamo['id'];
         <?php if (empty($detalles)): ?>
             <div class="alert alert-warning">No hay documentos en este préstamo. Utilice el buscador abajo para agregar.</div>
         <?php else: ?>
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Documento</th>
-                            <th>Contenedor</th>
-                            <th>Ubicación</th>
-                            <th>Estado Actual</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($detalles as $doc): ?>
+                <!-- Table (Form opened above) -->
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
                             <tr>
-                                <td>
-                                    <strong><?= htmlspecialchars($doc['tipo_documento'] ?? 'N/A') ?></strong><br>
-                                    <small><?= htmlspecialchars($doc['gestion']) ?> | #<?= htmlspecialchars($doc['nro_comprobante']) ?></small>
-                                </td>
-                                <td><?= htmlspecialchars($doc['tipo_contenedor'] ?? '') ?> #<?= htmlspecialchars($doc['contenedor_numero'] ?? '') ?></td>
-                                <td><small><?= htmlspecialchars($doc['ubicacion_fisica'] ?? '') ?></small></td>
-                                <td>
-                                    <?php if ($doc['estado'] === 'Prestado'): ?>
-                                        <span class="badge badge-prestado">Prestado</span>
-                                    <?php elseif ($doc['estado'] === 'Devuelto'): ?>
-                                        <span class="badge badge-disponible">Devuelto</span>
-                                    <?php else: ?>
-                                        <span class="badge"><?= $doc['estado'] ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <a href="/prestamos/quitarDetalle/<?= $doc['id'] ?>" class="btn btn-danger btn-sm" 
-                                       onclick="return confirm('¿Quitar este documento del préstamo? Volverá a estar DISPONIBLE.');">
-                                        ✕ Quitar
-                                    </a>
-                                </td>
+                                <th style="width: 40px; text-align: center;">
+                                    <input type="checkbox" id="check-all-docs" onclick="toggleAllDocs(this)" checked style="transform: scale(1.5); cursor: pointer;">
+                                </th>
+                                <th>Documento</th>
+                                <th>Contenedor</th>
+                                <th>Ubicación</th>
+                                <th>Estado Documento</th>
+                                <th>Estado Solicitud</th>
+                                <th>Acciones</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($detalles as $doc): ?>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <input type="checkbox" name="documentos[]" value="<?= $doc['id'] ?>" class="doc-check" checked style="transform: scale(1.5); cursor: pointer;">
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($doc['tipo_documento'] ?? 'N/A') ?></strong><br>
+                                        <small><?= htmlspecialchars($doc['gestion']) ?> | #<?= htmlspecialchars($doc['nro_comprobante']) ?></small>
+                                    </td>
+                                    <td><?= htmlspecialchars($doc['tipo_contenedor'] ?? '') ?> #<?= htmlspecialchars($doc['contenedor_numero'] ?? '') ?></td>
+                                    <td><small><?= htmlspecialchars($doc['ubicacion_fisica'] ?? '') ?></small></td>
+                                    <td>
+                                        <span class="badge badge-secondary"><?= htmlspecialchars($doc['estado_anterior'] ?? 'N/A') ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($doc['estado'] === 'Prestado'): ?>
+                                            <span class="badge badge-prestado">Prestado</span>
+                                        <?php elseif ($doc['estado'] === 'Devuelto'): ?>
+                                            <span class="badge badge-disponible">Devuelto</span>
+                                        <?php else: ?>
+                                            <span class="badge"><?= $doc['estado'] ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <a href="/prestamos/quitarDetalle/<?= $doc['id'] ?>" class="btn btn-danger btn-sm" 
+                                           onclick="return confirm('¿Quitar este documento del préstamo? Volverá a estar DISPONIBLE.');">
+                                            ✕ Quitar
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+         <?php endif; ?>
+         
+        <div style="margin-top: 15px; text-align: right;">
+            <button type="submit" class="btn btn-primary btn-lg">
+                    Confirmar Préstamo
+            </button>
+            <p class="text-muted"><small>* Se guardarán los cambios del encabezado y la confirmación de documentos.</small></p>
+        </div>
+        </form> <!-- Close consolidated form -->
     </div>
+    
+    <script>
+    function toggleAllDocs(source) {
+        const checkboxes = document.querySelectorAll('.doc-check');
+        for(let i=0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+    </script>
 
     <!-- 3. Buscador para Agregar Nuevos Documentos -->
     <div class="edit-section search-section" style="background: #f0f4f8; padding: 20px; border-top: 2px solid #e2e8f0;">
@@ -167,21 +195,50 @@ $pageTitle = 'Editar Préstamo #' . $prestamo['id'];
                                 <td><?= htmlspecialchars($doc['tipo_documento']) ?></td>
                                 <td><?= htmlspecialchars($doc['gestion']) ?></td>
                                 <td><?= htmlspecialchars($doc['nro_comprobante']) ?></td>
-                                <td><?= htmlspecialchars($doc['tipo_contenedor'] ?? '') ?> #<?= htmlspecialchars($doc['contenedor_numero'] ?? '') ?></td>
+                                <td>
+                                    <?php if (!empty($doc['contenedor_numero'])): ?>
+                                        <span class="badge badge-info"><?= htmlspecialchars($doc['tipo_contenedor']) ?> #<?= htmlspecialchars($doc['contenedor_numero']) ?></span>
+                                    <?php else: ?>
+                                        Sin asignar
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php
                                         $est = $doc['estado_documento'];
-                                        $badge = 'badge-secondary';
-                                        if ($est === 'DISPONIBLE') $badge = 'badge-disponible';
-                                        if ($est === 'FALTA') $badge = 'badge-falta';
+                                        $badgeClass = '';
+                                        $icon = '';
+                                        switch($est) {
+                                            case 'DISPONIBLE':
+                                                $badgeClass = 'badge-disponible';
+                                                $icon = '🟢';
+                                                break;
+                                            case 'FALTA':
+                                                $badgeClass = 'badge-falta';
+                                                $icon = '🔴';
+                                                break;
+                                            case 'PRESTADO':
+                                                $badgeClass = 'badge-prestado';
+                                                $icon = '🔵';
+                                                break;
+                                            case 'ANULADO':
+                                                $badgeClass = 'badge-anulado';
+                                                $icon = '🟣';
+                                                break;
+                                            case 'NO UTILIZADO':
+                                                $badgeClass = 'badge-no-utilizado';
+                                                $icon = '🟡';
+                                                break;
+                                            default:
+                                                $badgeClass = 'badge-secondary';
+                                        }
                                     ?>
-                                    <span class="badge <?= $badge ?>"><?= $est ?></span>
+                                    <span class="badge <?= $badgeClass ?>"><?= $icon ?> <?= $est ?></span>
                                 </td>
                                 <td>
                                     <form action="/prestamos/agregarDetalle" method="POST" style="margin:0;">
                                         <input type="hidden" name="encabezado_id" value="<?= $prestamo['id'] ?>">
                                         <input type="hidden" name="documento_id" value="<?= $doc['id'] ?>">
-                                        <button type="submit" class="btn btn-success btn-sm">➕ Agregar</button>
+                                        <button type="submit" class="btn btn-success btn-sm btn-agregar">➕ Agregar</button>
                                     </form>
                                 </td>
                             </tr>
@@ -190,15 +247,57 @@ $pageTitle = 'Editar Préstamo #' . $prestamo['id'];
                 </tbody>
             </table>
             
-            <!-- Paginación Simple -->
-            <?php if ($paginacion['total_pages'] > 1): ?>
-                <div class="pagination" style="justify-content: center; gap: 5px; margin-top: 10px;">
-                    <?php for ($i = 1; $i <= $paginacion['total_pages']; $i++): ?>
-                        <a href="?<?= http_build_query(array_merge($filtros, ['page' => $i])) ?>" 
-                           class="btn btn-sm <?= $i == $paginacion['page'] ? 'btn-primary' : 'btn-light' ?>">
-                            <?= $i ?>
-                        </a>
-                    <?php endfor; ?>
+            <!-- Paginación Google Style -->
+            <?php if (($paginacion['total_pages'] ?? 0) > 1): ?>
+                <div class="pagination" style="display: flex; justify-content: center; align-items: center; gap: 8px; padding: 15px 0; flex-wrap: wrap;">
+                    <?php 
+                        $current = $paginacion['page'];
+                        $total_p = $paginacion['total_pages'];
+                        $max_visible = 10;
+                        
+                        $start = max(1, $current - floor($max_visible / 2));
+                        $end = min($total_p, $start + $max_visible - 1);
+                        
+                        if ($end - $start + 1 < $max_visible) {
+                            $start = max(1, $end - $max_visible + 1);
+                        }
+                        
+                        $params = $filtros;
+                    ?>
+
+                    <!-- Primera -->
+                    <?php if ($current > 1): ?>
+                        <a href="?<?= http_build_query(array_merge($params, ['page' => 1])) ?>" class="btn btn-secondary btn-sm">⇤ Primero</a>
+                    <?php endif; ?>
+
+                    <!-- Anterior -->
+                    <?php if ($current > 1): ?>
+                        <a href="?<?= http_build_query(array_merge($params, ['page' => $current - 1])) ?>" class="btn btn-warning btn-sm">← Anterior</a>
+                    <?php else: ?>
+                        <button class="btn btn-secondary btn-sm" disabled>← Anterior</button>
+                    <?php endif; ?>
+                    
+                    <!-- Números -->
+                    <div class="pagination-numbers" style="display: flex; gap: 2px; background: #fff; padding: 3px; border-radius: 4px; border: 1px solid #dee2e6;">
+                        <?php for ($i = $start; $i <= $end; $i++): ?>
+                            <a href="?<?= http_build_query(array_merge($params, ['page' => $i])) ?>" 
+                               class="btn btn-sm <?= $i == $current ? 'btn-primary' : 'btn-light' ?>" style="border-radius: 2px;">
+                                <?= $i ?>
+                            </a>
+                        <?php endfor; ?>
+                    </div>
+                    
+                    <!-- Siguiente -->
+                    <?php if ($current < $total_p): ?>
+                        <a href="?<?= http_build_query(array_merge($params, ['page' => $current + 1])) ?>" class="btn btn-warning btn-sm">Siguiente →</a>
+                    <?php else: ?>
+                        <button class="btn btn-secondary btn-sm" disabled>Siguiente →</button>
+                    <?php endif; ?>
+
+                    <!-- Última -->
+                    <?php if ($current < $total_p): ?>
+                        <a href="?<?= http_build_query(array_merge($params, ['page' => $total_p])) ?>" class="btn btn-secondary btn-sm">Último ⇥</a>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -212,10 +311,24 @@ $pageTitle = 'Editar Préstamo #' . $prestamo['id'];
     align-items: center;
 }
 .required { color: red; }
-.badge-disponible { background-color: #28a745; color: white; }
-.badge-prestado { background-color: #fd7e14; color: white; }
-.badge-falta { background-color: #dc3545; color: white; }
+.badge { background: #1B3C84; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; display: inline-block; }
+.badge-info { background: #17a2b8; }
+.badge-disponible { background: #28a745; } /* Verde */
+.badge-falta { background: #dc3545; } /* Rojo */
+.badge-prestado { background: #17a2b8; } /* Celeste */
+.badge-no-utilizado { background: #ffc107; color: #333; } /* Amarillo */
+.badge-anulado { background: #6f42c1; } /* Morado */
 .table-sm td, .table-sm th { padding: 0.3rem; }
+
+/* Botón Agregar Hover Amarillo */
+.btn-agregar {
+    transition: all 0.3s ease;
+}
+.btn-agregar:hover {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #212529 !important;
+}
 </style>
 
 <?php 
